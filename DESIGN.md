@@ -1,12 +1,13 @@
 # workflow-architect — design
 
-Draft 3 · 2026-11-06 · Target: Claude Code (other tools later)
-Status: design only, nothing built yet. Decisions so far: section 12. Open questions: section 13.
+Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
+Status: v0.1 being built (section 10). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
-A personal Claude Code skill. You open a terminal in a project folder and type
-`/workflow-architect`. It checks the machine, interviews you adaptively, reads back a one-page
+A personal skill for AI coding tools (Claude Code, Codex and others that read skills). You open
+your tool in a project folder and start the skill (in Claude Code: `/workflow-architect`). It
+checks the machine, interviews you adaptively, reads back a one-page
 brief, proposes the smallest workflow that fits, builds it after your approval and tests it with a
 practice round. During the project the workflow checks its own health and evolves: it adds what
 is missing, removes what is unused, and asks you before any change you have not delegated.
@@ -36,7 +37,9 @@ is missing, removes what is unused, and asks you before any change you have not 
 `scripts/probe.py` (read-only) finds the OS and shell, git, Python, installed AI CLIs, the folder's
 contents and any existing CLAUDE.md, AGENTS.md or `.claude/`. It reports what it found and asks
 only where it matters ("the folder has 14 files: build around them?"). It never changes existing
-files without asking.
+files without asking. It notes which AI tool is running and which others are installed. If Python
+is missing it explains the impact in plain terms (the `tools/wf.py` checks would then be done by
+the agent reading files: slower, costlier, less reliable) and you choose: install it, or skip it.
 
 ### 3.2 Adaptive interview
 
@@ -82,7 +85,8 @@ validated, test-split hygiene; fine-tuning: compute provider, data licence, eval
 3. List the unknowns whose answer would change the initial structure.
 4. Rank them by impact (how different the structure would be across answers) and dependency
    (prerequisites first).
-5. Ask at most four, in one batch: multiple choice with "Other" when answers are predictable,
+5. Ask at most four, in one batch (with the tool's question feature if it has one, else plain
+   text with lettered options): multiple choice with "Other" when answers are predictable,
    open text when not; each with one line on why it is asked and what it changes, and a
    recommended option where there is one.
 6. Stop when no setup-relevant unknown remains. The rest become **just-in-time questions** in
@@ -119,14 +123,15 @@ Write the files, then run one practice cycle with a dummy task through every ena
 (driver, reviewer, workers, log, NEXT, checks). Anything that fails on this machine is fixed or
 replaced, with your agreement, before handover. The dummy work is removed.
 
-### 3.6 Working loop: `/step`
+### 3.6 Working loop: the step (`/step` in Claude Code; "do a step" in any tool)
 
-1. Status in three lines (`wf.py status`).
+1. Status in three lines (`wf.py begin`, which also numbers the step).
 2. Ask any question that blocks the next action; record the answer.
 3. Check limits: external budget, your hours, protected actions.
 4. Do the action, directly or through task cards to workers and the reviewer.
 5. Update the end product, LOG (with tags), STATE and NEXT (exactly one action); commit if chosen.
 6. Health check (`wf.py health`, a script, no AI cost); evolve if a signal fired (section 7).
+   In v0.1 this is `wf.py check` (file checks only).
 7. Report: what moved in the end product (or "nothing moved"), external spend if any, reviewer
    verdict, next action, questions for you, one-line workflow health, changes it made by itself
    (with undo).
@@ -136,7 +141,8 @@ replaced, with your agreement, before handover. The dummy work is removed.
 
 | File | Purpose |
 |---|---|
-| `CLAUDE.md` | short: what this is, how to start, the rules, where things are |
+| `AGENTS.md` | short: what this is, how to start, the rules, where things are (read by most AI tools) |
+| tool adapters | only for the tools you use, e.g. a `CLAUDE.md` that imports AGENTS.md, and `/step` in `.claude/skills/step/` |
 | `BRIEF.md` | the approved brief (versioned) |
 | `deliverable/` | the end-product skeleton; every task fills a named part |
 | `NEXT.md` | exactly one next action and its actor (AI or YOU) |
@@ -146,11 +152,11 @@ replaced, with your agreement, before handover. The dummy work is removed.
 | `QUESTIONS.md` | open and just-in-time questions with their triggers |
 | `RULES.md` | a few rules, each with its origin and its check (if any) |
 | `EVOLUTION.md` | every workflow change: evidence, change, applied by (auto or you), check-back, outcome |
-| `.claude/skills/step/` | `/step` |
-| `.claude/skills/evolve/` | `/evolve`: health review, look-back, undo |
-| `tools/wf.py` | `status`, `log`, `check`, `health`, `undo` (if Python is available and agreed) |
+| `tools/step.md` | the step procedure in plain words, so any tool can follow it |
+| `/evolve` | health review, look-back, undo (from v0.2) |
+| `tools/wf.py` | v0.1: `status`, `begin`, `log`, `check`; v0.2 adds `health`, `undo` (if Python is available or installed with your OK) |
 
-Rule in every CLAUDE.md: **when unsure, ask; don't assume.** Agents stop and ask when the brief
+Rule in every AGENTS.md: **when unsure, ask; don't assume.** Agents stop and ask when the brief
 does not cover the case, when two readings lead to different work, when an action would exceed a
 limit, or when it cannot be undone. How strict this is comes from the interview.
 
@@ -159,7 +165,7 @@ limit, or when it cannot be undone. How strict this is comes from the interview.
 | Module | Added when | Adds |
 |---|---|---|
 | Independent reviewer | errors would be costly or hard to see; or an error escaped | sees the work and the criteria, not the driver's reasoning; cannot edit; ideally another model; calibrated with your good and bad examples |
-| Workers | big, repetitive or parallel tasks | `.claude/agents/` definitions (model, tools) and task cards |
+| Workers | big, repetitive or parallel tasks | agent definitions in the tool's format (e.g. `.claude/agents/`: model, tools) and task cards |
 | Decision points | go/no-go moments | options continue, narrow, pivot, stop; you decide |
 | External budget | the first paid external resource | caps, check before spending, spend log |
 | Human hours | tasks need your work | hours tally; warning before tasks over your limit |
@@ -248,8 +254,8 @@ structure is re-checked against it.
 
 ### 7.7 Guards against bloat
 
-Starting caps: RULES.md at most 12 rules (merge or retire one to add another); CLAUDE.md at most
-80 lines. Every module must justify itself at each look-back; unused parts are disabled, then
+Starting caps: RULES.md at most 12 rules (merge or retire one to add another); AGENTS.md and each
+adapter at most 80 lines. Every module must justify itself at each look-back; unused parts are disabled, then
 removed. Rationale: AI-generated multi-agent designs tend to bloat (arXiv 2606.13003, "The
 Illusion of Multi-Agent Advantage").
 
@@ -261,8 +267,10 @@ projects start with them.
 ## 8. Skill package layout
 
 In this repo the package lives in `skill/`; the repo root keeps DESIGN.md, CLAUDE.md and test
-material. For use, `skill/` is linked or copied to `~/.claude/skills/workflow-architect/` (decided
-when v0.1 is first tried).
+material. The package uses the open Agent Skills format (a folder with `SKILL.md`), so tools other
+than Claude Code can load it. For use, `skill/` is linked or copied to the tool's skills folder
+(Claude Code: `~/.claude/skills/workflow-architect/`; link or copy decided when v0.1 is first
+tried).
 
 ```
 skill/
@@ -277,7 +285,7 @@ skill/
 │   ├── signals.md          tags, metrics, thresholds
 │   ├── changes.md          change sizes, levels, protected list
 │   └── lookback.md         the periodic independent review
-├── templates/              files written into projects (core files, /step, /evolve, agents)
+├── templates/              files written into projects (core files, step procedure, tool adapters)
 ├── scripts/
 │   ├── probe.py            machine check (read-only)
 │   └── wf.py               copied into projects
@@ -312,7 +320,7 @@ skill/
 
 ## 11. Not in scope for now
 
-Codex or other tools; scheduling between sessions; parallel tracks (agent teams); public release.
+Hands-on tests in tools other than Claude Code (after v0.1); scheduling between sessions; parallel tracks (agent teams); public release.
 
 ## 12. Decisions so far
 
@@ -324,9 +332,19 @@ Codex or other tools; scheduling between sessions; parallel tracks (agent teams)
   money questions only for external spending (GPUs, compute, LLM APIs and the like).
 - 2026-11-06: the evolution levels and the protected list are fine for now; level 2 is the
   default. Python, and whatever other tools are relevant, may be used.
+- 2026-11-07: the skill is harness-agnostic, not Claude Code only (replaces "Claude Code only for
+  now"). v0.1: tool-neutral design (open Agent Skills format; project rules in AGENTS.md; small
+  adapters only for the tools used), hand-tested in Claude Code only.
+- 2026-11-07: if Python is missing, the skill explains the impact at a high level and you decide:
+  install Python and continue, or skip it.
+- 2026-11-07: git: the agent commits this repo at sensible points and pushes to
+  `https://github.com/Kishore-Kmr/workflow-architect.git` (replaces "ask before the first commit"
+  and "never push").
+- 2026-11-07: v0.1 projects get an empty EVOLUTION.md but no `/evolve`; `/evolve` comes in v0.2.
+- 2026-11-07: when an interview finds a need v0.1 cannot meet (a module from v0.3), the proposal
+  says so, RULES.md gets a temporary rule and QUESTIONS.md a just-in-time question.
 
 ## 13. Open questions
 
-1. Should each build step be committed to this repo's git? Ask before the first commit.
-2. Later: which domain pack comes first (v0.3); which 2–3 real projects to test on; whether to
-   offer your research RULES.md lessons as an import; GitHub public or private.
+1. Later: which domain pack comes first (v0.3); which 2–3 real projects to test on; whether to
+   offer your research RULES.md lessons as an import.
