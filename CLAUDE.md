@@ -7,8 +7,8 @@ check itself and evolve.
 
 **Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-07: design draft 4;
 v0.1 built and tested (closed). v0.2 (evolution engine) built and self-tested
-(`python skill/evals/test_scripts.py`); next: v0.2 simulated runs, then the user's hands-on test
-on a toy project with a prepared history (section 10, `tests/`).
+(`python skill/evals/test_scripts.py`) and simulation-tested (`tests/`). Next: the user's
+hands-on test in `../wa-v02-handson/` (made by `skill/evals/make_toy.py`), then v0.3.
 
 ## How to work here
 

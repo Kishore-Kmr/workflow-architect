@@ -17,8 +17,9 @@ evidence says so. This file says how. Below, `wf` means `{{python}} tools/wf.py`
    - **Large:** add or remove a file, folder, command or helper agent; change how often the
      workflow stops (STATE.json "autonomy"), the look-back interval or the health thresholds;
      delete anything.
-   - **Protected**, always the user's: everything under "Always ask first" in AGENTS.md, and how
-     freely the workflow changes itself (STATE.json "evolution_level").
+   - **Protected**, always the user's: everything under "Always ask first" in AGENTS.md, how
+     freely the workflow changes itself (STATE.json "evolution_level"), anything in BRIEF.md,
+     and so every re-interview.
 5. Apply or propose, by STATE.json "evolution_level":
 
    | Level | Small | Large | Protected |
