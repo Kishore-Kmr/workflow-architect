@@ -1,8 +1,8 @@
 # workflow-architect — design
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
-Status: v0.1 built and tested (section 9: simulated runs and your hands-on run, see `tests/`);
-v0.1 testing closed 2026-11-07. Next: v0.2 (section 10). Decisions so far: section 12. Open questions: section 13.
+Status: v0.1 built and tested (closed 2026-11-07, see `tests/`). v0.2 (evolution engine) built
+and self-tested; simulated runs and your hands-on test next (section 10). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
@@ -140,11 +140,11 @@ replaced, with your agreement, before handover. The dummy work is removed.
 3. Check limits: external budget, your hours, protected actions.
 4. Do the action, directly or through task cards to workers and the reviewer.
 5. Update the end product, LOG (with tags), STATE and NEXT (exactly one action); commit if chosen.
-6. Health check (`wf.py health`, a script, no AI cost); evolve if a signal fired (section 7).
-   In v0.1 this is `wf.py check` (file checks only).
+6. Health check (`wf.py health`, a script, no AI cost: the file checks, then the metrics);
+   evolve if a signal fired (section 7). If a look-back is due, it is the next step's action.
 7. Report: what moved in the end product (or "nothing moved"), external spend if any, reviewer
-   verdict, next action, questions for you, one-line workflow health, changes it made by itself
-   (with undo).
+   verdict, next action, questions for you (including proposed workflow changes), one-line
+   workflow health, changes it made by itself (with "to undo, say 'undo E-<n>'").
 8. Continue or stop, according to the autonomy level.
 
 ## 4. Minimal core (every project)
@@ -161,10 +161,12 @@ replaced, with your agreement, before handover. The dummy work is removed.
 | `DECISIONS.md` | your decisions, word for word, dated |
 | `QUESTIONS.md` | open and just-in-time questions with their triggers |
 | `RULES.md` | a few rules, each with its origin and its check (if any) |
-| `EVOLUTION.md` | every workflow change: evidence, change, applied by (auto or you), check-back, outcome |
+| `EVOLUTION.md` | every workflow change: evidence, change, size, applied by (auto or you), measure, check-back, undo, outcome; and the look-back reports |
 | `tools/step.md` | the step procedure in plain words, so any tool can follow it |
-| `/evolve` | health review, look-back, undo (from v0.2) |
-| `tools/wf.py` | v0.1: `status`, `begin`, `log`, `check`, `practice-done`; v0.2 adds `health`, `undo` (if Python is available or installed with your OK) |
+| `tools/evolve.md` | how the workflow changes itself (sizes, levels, records), check-back, undo, `/evolve`, re-interview |
+| `tools/lookback.md` | the periodic look-back by a fresh helper |
+| `/evolve` | Claude Code adapter for tools/evolve.md; other tools: "evolve the workflow" |
+| `tools/wf.py` | `status`, `begin`, `log`, `check`, `health`, `change add` / `change mark`, `practice-done` (if Python is available or installed with your OK) |
 
 Rule in every AGENTS.md: **when unsure, ask; don't assume.** Agents stop and ask when the brief
 does not cover the case, when two readings lead to different work, when an action would exceed a
@@ -210,21 +212,26 @@ Thresholds are starting values; the look-back can tune them.
 | Repeated correction | the same key twice | new rule, plus a check if code can verify it |
 | Repeated instruction | the same key three times | new project command |
 | Escaped error | any | tighten or recalibrate the reviewer |
-| Reviewer finds nothing | no findings in 15 reviews | review less often (always a proposal) |
-| Question backlog | more than 5 open, or any older than 3 sessions | batch questions; adjust asking policy |
-| Overrun | a step took 3× the median | split tasks; time limits |
-| Unused part | no `[used]` in 20 steps | disable, later remove |
-| Silent rule | never fired in 30 steps | candidate for retirement |
+| Reviewer finds nothing | no findings in 15 reviews (from v0.3, with the reviewer) | review less often (always a proposal) |
+| Question backlog | more than 5 open, or one open for more than 3 working days (days with steps; sessions are not logged) | batch questions; adjust asking policy |
+| Overrun | a step took 3× the median of the previous 10 and at least 20 minutes (steps with your own work left out), or was tagged `[overrun]` | split tasks; time limits |
+| Unused part | no `[used]` in 20 steps (from v0.3, with the modules) | disable, later remove |
+| Silent rule | no `[rule:<id>]` in 30 steps (core and paused rules left out) | pause, later retire |
 | Process share | 3 of the last 5 steps were `[workflow]` | warn: process is eating the work |
-| Goal drift | work not linked to the brief or end product | re-interview the affected topics |
+| Goal drift | work not linked to the brief or end product (judged by the look-back, not the script) | re-interview the affected topics |
+
+A warning counts only events after it was last dealt with: a change that measures it, or a
+`[noted:<warning>]` log line saying why no change is needed.
 
 ### 7.3 Check points
 
 - **Every step:** the metrics, and one health line in the report.
 - **When a metric warns:** the driver reads the evidence lines, names a likely cause and drafts a
   change.
-- **Every N steps and at each phase end** (N from the interview): a **look-back** by a fresh
-  agent that did not do the work. Is the workflow moving the end product? Where is the friction?
+- **Every N steps and at each phase end** (N: default 10, shown in the brief for your OK): a
+  **look-back** by a fresh agent that did not do the work (a helper agent with a fresh context
+  if the tool has one, otherwise a fresh session). It writes only its report (`L-<n>` in
+  EVOLUTION.md); the driver handles the changes it suggests. Is the workflow moving the end product? Where is the friction?
   What is unused? Does the brief still match reality? The driver should not grade its own process.
 - **Any time:** you type `/evolve`, or say something is annoying (logged as a signal).
 
@@ -234,8 +241,8 @@ Thresholds are starting values; the look-back can tune them.
   an existing rule; tweak a checklist or template; turn a repeated instruction into a command;
   split a recurring task; disable (not delete) an unused part; recalibrate the reviewer with a
   new example.
-- **Large:** add or remove a module or agent; change step size or look-back interval; delete an
-  unused part.
+- **Large:** add or remove a module or agent; change step size, look-back interval or health
+  thresholds; delete an unused part.
 - **Protected (always you):** the goal, finish line and success criteria; external spending or
   your hours beyond limits; decision points and who decides; deleting work or data, or anything
   irreversible; anything outward (push, publish, contacting people); rules that constrain you;
@@ -249,11 +256,19 @@ time:
 3. **Auto-most:** small and large changes apply by themselves within your limits; protected ones
    are proposed.
 
+Script guards: `wf.py change add` refuses an automatic change that the level does not allow, and
+`wf.py check` flags such entries written by hand. `wf.py begin` notes a fingerprint of BRIEF.md,
+DECISIONS.md, the evolution level and the limits; `wf.py check` flags any change to them in a
+step where no answer from you is logged.
+
 ### 7.5 Trial, check, keep or roll back
 
-Every change gets an entry in EVOLUTION.md: id, evidence (log lines), change, applied by (auto or
-you), expected effect, metric, check-back after K steps (default 5 to 10), undo. At check-back the
-script compares the metric before and after. If there is no improvement the change is rolled back:
+Every change gets an entry in EVOLUTION.md (written by `wf.py change add`): id, evidence (log
+lines), change, size, applied by (auto or you), expected effect, measure, its value before (rate
+over the last 10 steps), check-back step (after K steps, default 5), and undo: the exact steps to
+reverse it (no copies of files are kept; your decision of 2026-11-07). At check-back the script
+compares the measure before and since the change. If there is nothing to compare (zero before
+and since), the change is kept and the next look-back reviews it. If there is no improvement the change is rolled back:
 automatically if it was applied automatically, otherwise as a proposal. With few steps this
 comparison is noisy: it is a sanity check, reviewed again at the look-back, not proof.
 
@@ -292,14 +307,12 @@ skill/
 │   └── brief-template.md
 ├── domains/                optional packs: extra topics and end-product skeletons
 ├── modules/                one file per module: purpose, trigger, files, how to remove
-├── evolution/
-│   ├── signals.md          tags, metrics, thresholds
-│   ├── changes.md          change sizes, levels, protected list
-│   └── lookback.md         the periodic independent review
-├── templates/              files written into projects (core files, step procedure, tool adapters)
+├── templates/              files written into projects: core files; tools/step.md,
+│                           tools/evolve.md (change sizes, levels, undo, re-interview) and
+│                           tools/lookback.md; tool adapters (/step, /evolve)
 ├── scripts/
 │   ├── probe.py            machine check (read-only)
-│   └── wf.py               copied into projects
+│   └── wf.py               copied into projects; tags, metrics and thresholds live here
 └── evals/                  tests for the skill
 ```
 
@@ -325,7 +338,8 @@ skill/
 1. **v0.1:** machine check, adaptive interview (seeds, coverage map, planner), brief, proposal,
    minimal core, `/step` with full event tags (so evolution has data from day one), practice round.
 2. **v0.2:** evolution engine: `wf.py health`, warnings, `/evolve`, change levels, trial and
-   rollback, look-back, re-interview.
+   rollback, look-back, re-interview. Built 2026-11-07; the metrics that need modules wait
+   for v0.3.
 3. **v0.3:** modules (section 5) and the first domain packs.
 4. **v0.4:** full tests (section 9), lesson import, learning across projects, docs.
 
