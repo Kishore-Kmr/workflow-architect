@@ -146,7 +146,7 @@ replaced, with your agreement, before handover. The dummy work is removed.
 | `BRIEF.md` | the approved brief (versioned) |
 | `deliverable/` | the end-product skeleton; every task fills a named part |
 | `NEXT.md` | exactly one next action and its actor (AI or YOU) |
-| `STATE.json` | phase, brief and structure versions, autonomy, evolution level, modules, open questions; budget and hours only if relevant |
+| `STATE.json` | phase, brief and structure versions, autonomy, evolution level, modules, settings; budget and hours only if relevant (open questions are counted from QUESTIONS.md, not copied) |
 | `LOG.md` | one line per event: time, actor, what, end-product part, tags |
 | `DECISIONS.md` | your decisions, word for word, dated |
 | `QUESTIONS.md` | open and just-in-time questions with their triggers |
@@ -154,7 +154,7 @@ replaced, with your agreement, before handover. The dummy work is removed.
 | `EVOLUTION.md` | every workflow change: evidence, change, applied by (auto or you), check-back, outcome |
 | `tools/step.md` | the step procedure in plain words, so any tool can follow it |
 | `/evolve` | health review, look-back, undo (from v0.2) |
-| `tools/wf.py` | v0.1: `status`, `begin`, `log`, `check`; v0.2 adds `health`, `undo` (if Python is available or installed with your OK) |
+| `tools/wf.py` | v0.1: `status`, `begin`, `log`, `check`, `practice-done`; v0.2 adds `health`, `undo` (if Python is available or installed with your OK) |
 
 Rule in every AGENTS.md: **when unsure, ask; don't assume.** Agents stop and ask when the brief
 does not cover the case, when two readings lead to different work, when an action would exceed a
@@ -186,7 +186,8 @@ needs. Handoffs inside a step are automatic; between steps the autonomy level de
 ### 7.1 Signals: tags in LOG.md
 
 `[progress:<part>]` `[workflow]` `[fail]` `[redo]` `[correction:<key>]` `[repeat:<key>]` `[asked]`
-`[answered]` `[escaped:<review>]` `[used:<module>]` `[overrun]` `[rule:<id>]`, plus timestamps.
+`[answered]` `[escaped:<review>]` `[used:<module>]` `[overrun]` `[rule:<id>]`, plus timestamps,
+step numbers and a `[begin]` line at the start of each step (for step durations).
 
 ### 7.2 Health metrics (`wf.py health`, every step, no AI cost)
 
