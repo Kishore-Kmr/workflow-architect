@@ -82,7 +82,10 @@ just-in-time question (table at the end of brief-template.md). Ask: approve, cha
 
 ## Phase 5: generate
 
-After approval, in the project folder:
+After approval, in the project folder. First tell the user that their tool may ask permission
+for a few of these writes, and that approving them is expected (Claude Code asks before writing
+inside `.claude/`, and may ask before copying `wf.py` from the skill folder). If a write is
+refused, stop and offer options; don't work around it.
 
 1. **Core files.** `BRIEF.md` is the approved brief. The rest come from `<skill>/templates/core/`:
    replace every `{{...}}` with content from the brief, or delete it where the placeholder says

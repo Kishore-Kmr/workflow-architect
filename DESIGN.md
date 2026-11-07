@@ -344,6 +344,8 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
 - 2026-11-07: v0.1 projects get an empty EVOLUTION.md but no `/evolve`; `/evolve` comes in v0.2.
 - 2026-11-07: when an interview finds a need v0.1 cannot meet (a module from v0.3), the proposal
   says so, RULES.md gets a temporary rule and QUESTIONS.md a just-in-time question.
+- 2026-11-07: for use, `~/.claude/skills/workflow-architect` is a junction (link) to `skill/`, so
+  changes in the repo take effect immediately.
 
 ## 13. Open questions
 
