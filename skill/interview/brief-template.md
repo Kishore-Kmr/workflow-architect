@@ -34,6 +34,8 @@ yet)". Yours to add to at any time; the workflow reads it before each step.>
 - Git: <commit after each step | you commit | no git>
 - Workflow changes (evolution level 2): small, reversible changes to the workflow apply by
   themselves and are reported with an undo; bigger ones are proposed to you. **OK?**
+- Look-back: every 10 steps and at the end of each phase, a fresh helper checks whether the
+  workflow is moving the work forward. **OK?**
 
 ## What we know
 - <topic>: <fact> (<you said | checked | inferred: right?>)
@@ -69,10 +71,12 @@ Structure proposal (version 1)
   DECISIONS.md     your decisions, word for word
   QUESTIONS.md     open questions; questions saved for later
   RULES.md         <n> rules: <short list>
-  EVOLUTION.md     changes to the workflow (empty for now)
+  EVOLUTION.md     changes to the workflow, with undo (empty for now)
   tools/step.md    how to do one step
-  tools/wf.py      status, begin, log, check                 <- because: Python is available
-  .claude/skills/step/   the /step command                   <- because: you use Claude Code
+  tools/evolve.md  how the workflow checks and changes itself
+  tools/lookback.md  the regular look-back
+  tools/wf.py      status, log, checks, health               <- because: Python is available
+  .claude/skills/  the /step and /evolve commands            <- because: you use Claude Code
   <end-product parts, e.g. deliverable/outline.md>           <- because: <answer>
 
 Existing files: <kept as they are; which ones the parts point to>
@@ -86,7 +90,7 @@ Git: <what will happen, e.g. "git init, then one commit after the practice round
 
 Then ask: approve, change, or ask about something.
 
-## Modules: not built in v0.1
+## Modules: not built yet (they come in v0.3)
 
 They come in a later version. If the brief shows a need:
 - **It applies to the first phase:** propose its temporary rule for RULES.md (Origin: the user's
@@ -100,7 +104,7 @@ They come in a later version. If the brief shows a need:
 
 Use the table for the "Not added" lines too.
 
-| Module | Needed when | v0.1 temporary rule | Just-in-time question (trigger) |
+| Module | Needed when | Temporary rule | Just-in-time question (trigger) |
 |---|---|---|---|
 | Independent reviewer | errors would be costly or hard to see | the user (or a named person) checks <part> before it counts as done | who checks it, against what? (first draft of <part>) |
 | Workers | big, repetitive or parallel tasks | split such a task over several steps; say how many before starting | how to split it? (first big task) |

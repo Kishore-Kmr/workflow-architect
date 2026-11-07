@@ -60,7 +60,7 @@ stage.
 - Relevant: GPUs, cloud compute, paid APIs or LLM calls, bought data, paid annotators,
   services, hosting.
 - Find out: which; a spending cap; whether each spend needs approval.
-- Feeds: STATE.json "limits"; the budget module (later version; in v0.1 a temporary rule).
+- Feeds: STATE.json "limits"; the budget module (v0.3; until then a temporary rule).
 - When: later: "when the first task that would spend money is planned" (e.g. the first
   experiment). Until then the protected list already requires asking before any spend.
 
@@ -75,7 +75,7 @@ stage.
 ## quality: Quality and verification
 - Relevant: always; the form varies (tests, validation, editing, a reader, a demo).
 - Find out: how we will check the work is right; which errors would be costly or hard to see.
-- Feeds: "Done when" lines; checkable rules; the reviewer module (later version; in v0.1 a
+- Feeds: "Done when" lines; checkable rules; the reviewer module (v0.3; until then a
   temporary rule).
 - When: brief (propose how the first phase is checked, **OK?**); later for each new phase.
 

@@ -8,11 +8,18 @@ them instead of relying on earlier conversations. Sessions can be short and fres
 ## Start of every session
 
 1. Read `NEXT.md`: the one next action and who does it (AI or YOU).
-2. Run `{{python}} tools/wf.py status` for a three-line status.
+2. Run `{{python}} tools/wf.py status` for a short status (it says when a look-back is due).
 3. To move the project forward, do one step: follow `tools/step.md`.{{ Tool shortcut, e.g. " In Claude Code: `/step`." or delete}}
 4. Before any work, read `RULES.md` and the "Your notes" section of `BRIEF.md` (the user's own
    notes and assumptions; they may add to it at any time). Read the rest of `BRIEF.md` when
    you need the goal, limits or style.
+
+## The workflow checks and changes itself
+
+After each step, `tools/wf.py health` checks the workflow. Small fixes may be applied by the AI
+(STATE.json "evolution_level"); each is recorded in `EVOLUTION.md` with how to undo it. When
+the user says "undo E-<n>", asks to review the workflow, or says the goal or a key fact
+changed, follow `tools/evolve.md`.{{ Tool shortcut, e.g. " In Claude Code: `/evolve`." or delete}}
 
 ## Core rule: when unsure, ask; don't assume
 
@@ -30,7 +37,8 @@ Never record a decision the user did not make. Label numbers as measured, estima
 
 The goal, finish line and success criteria; spending money or the user's hours beyond the
 limits; go/no-go decisions; deleting work or data, or anything irreversible; anything outward
-(push, publish, contacting people); rules that constrain the user; new paid tools or accounts.
+(push, publish, contacting people); rules that constrain the user; new paid tools or accounts;
+how freely the workflow changes itself (evolution level).
 
 ## Where things are
 
@@ -44,6 +52,8 @@ limits; go/no-go decisions; deleting work or data, or anything irreversible; any
 | `DECISIONS.md` | the user's decisions, word for word, dated |
 | `QUESTIONS.md` | open questions, and questions saved for later with their triggers |
 | `RULES.md` | project rules, each with its origin |
-| `EVOLUTION.md` | changes to this workflow |
+| `EVOLUTION.md` | changes to this workflow, with undo, and look-back reports |
 | `tools/step.md` | how to do one step |
-| `tools/wf.py` | status, begin, log, check |
+| `tools/evolve.md` | how the workflow changes itself; undo; re-interview |
+| `tools/lookback.md` | the regular look-back by a fresh helper |
+| `tools/wf.py` | status, begin, log, check, health, change |

@@ -366,6 +366,11 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   temporary rules. A rule for a missing module is added at setup only if it applies to the
   first phase; a later-stage need gets only its just-in-time question. No rule may repeat the
   core rules, the protected list or a setting. (Retest: 11 rules were proposed before this.)
+- 2026-11-07, v0.2 plan approved by you, with two changes: (1) no saved copies of files before
+  a workflow change (too much overhead); each change records in EVOLUTION.md exactly how to undo
+  it, and git history helps where git is used. (2) No upgrade path for projects set up with
+  v0.1; they are set up fresh. Your v0.2 hands-on test uses a toy project with a prepared
+  history, so the self-checks can be seen without 15-20 real steps.
 
 ## 13. Open questions
 
