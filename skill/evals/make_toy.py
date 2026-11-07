@@ -99,11 +99,59 @@ FILL = {  # placeholder prefix -> text
 PARTS = {"sources": "notes/sources.md", "related-work": "paper/related-work.md",
          "outline": "paper/outline.md"}
 
+# The end product so far; it matches the made-up history below.
+SOURCES = """# Sources
+
+Papers on LLM-as-judge length bias, each checked to exist.
+
+- Zheng et al. 2023, Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena
+- Wang et al. 2023, Large Language Models are not Fair Evaluators
+- Saito et al. 2023, Verbosity Bias in Preference Labeling by Large Language Models
+- Singhal et al. 2023, A Long Way to Go: Investigating Length Correlations in RLHF
+- Dubois et al. 2024, Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators
+"""
+RELATED_WORK = """# Related work
+
+What is known about length bias in LLM graders.
+
+## Summaries
+
+- Zheng et al. 2023: LLM judges agree well with humans but show position and verbosity biases.
+- Wang et al. 2023: the order in which answers are shown changes LLM judgements.
+- Saito et al. 2023: LLM preference labels favour longer answers (verbosity bias).
+- Singhal et al. 2023: much of the gain from RLHF tracks answer length.
+- Dubois et al. 2024: correcting win rates for length changes model rankings.
+
+## Draft
+
+LLM graders are widely used to compare model answers (Zheng et al. 2023), but they show
+systematic biases, such as favouring the answer shown first (Wang et al. 2023).
+
+Several studies report a preference for longer answers: Saito et al. (2023) call it verbosity
+bias, and Singhal et al. (2023) find that much of the gain from RLHF tracks answer length.
+
+Length-controlled AlpacaEval (Dubois et al. 2024) corrects win rates for length, which suggests
+the effect is large enough to matter in practice.
+"""
+OUTLINE = """# Outline
+
+The paper's structure.
+
+Scope: pairwise grading first (D-3).
+
+## Introduction
+{intro}## Related work
+## Method
+- open questions: which grader models? which answer pairs?
+## Results
+## Discussion
+"""
+
 # One step = a list of (actor, what, part, tags). "C" marks where a scenario puts its signal.
 BASE = [
-    [("AI", "listed 8 candidate papers on LLM-as-judge length bias", "sources",
+    [("AI", "listed 3 candidate papers on LLM-as-judge length bias", "sources",
       "progress:sources")],
-    [("AI", "summarised 3 papers", "related-work", "progress:related-work")],
+    [("AI", "summarised 2 papers", "related-work", "progress:related-work")],
     [("AI", "drafted the outline headings", "outline", "progress:outline")],
     [("YOU", "answered: focus on pairwise grading first", "-", "answered"),
      ("AI", "added a scope note to the outline", "outline", "progress:outline")],
@@ -175,12 +223,12 @@ def history(scenario):
         steps[8], steps[9] = steps[9], [
             ("AI", "drafted related-work paragraph 3", "related-work",
              "progress:related-work")]
-        steps[10] = [("AI", "checked all 10 sources exist before drafting", "sources",
+        steps[10] = [("AI", "re-checked title, authors and year of all 5 sources", "sources",
                       "progress:sources rule:R-3")]
-        steps[11] = [("AI", "added 2 verified sources", "sources", "progress:sources rule:R-3")]
+        steps[11] = [("AI", "noted which sources support each paragraph", "sources", "progress:sources rule:R-3")]
         steps.append([("AI", "drafted the outline intro", "outline", "progress:outline"),
-                      ("YOU", "said a 2022 workshop paper in the outline intro is cited with "
-                              "the wrong year", "-", "correction:missing-source"),
+                      ("YOU", "said Saito et al. is cited in the outline intro with the wrong "
+                              "year (2022, not 2023)", "-", "correction:missing-source"),
                       ("AI", "fixed the year", "outline", "redo")])
         steps.append([("AI", "listed the open method questions in the outline", "outline",
                        "progress:outline rule:R-3")])
@@ -237,17 +285,11 @@ def main(argv):
     shutil.copy(ADAPTERS / "CLAUDE.md", root / "CLAUDE.md")
     shutil.copy(ADAPTERS / "step-skill.md", root / ".claude/skills/step/SKILL.md")
     shutil.copy(ADAPTERS / "evolve-skill.md", root / ".claude/skills/evolve/SKILL.md")
-    (root / "notes/sources.md").write_text(
-        "# Sources\n\nCandidate papers on LLM-as-judge length bias (each checked to exist).\n\n"
-        "- Zheng et al. 2023, Judging LLM-as-a-judge with MT-Bench and Chatbot Arena\n"
-        "- Dubois et al. 2024, Length-controlled AlpacaEval\n", encoding="utf-8")
-    (root / "paper/related-work.md").write_text(
-        "# Related work\n\nWhat is known about length bias in LLM graders.\n\n"
-        "Paragraphs 1-3 drafted (see LOG.md).\n", encoding="utf-8")
-    (root / "paper/outline.md").write_text(
-        "# Outline\n\nThe paper's structure.\n\n## Introduction\n## Related work\n## Method\n"
-        "- open questions: which grader models? which answer pairs?\n## Results\n"
-        "## Discussion\n", encoding="utf-8")
+    (root / "notes/sources.md").write_text(SOURCES, encoding="utf-8")
+    (root / "paper/related-work.md").write_text(RELATED_WORK, encoding="utf-8")
+    intro = ("- why length bias matters when LLMs grade answers (Saito et al. 2023)\n"
+             if a.scenario == "rollback" else "")
+    (root / "paper/outline.md").write_text(OUTLINE.format(intro=intro), encoding="utf-8")
     (root / "DECISIONS.md").write_text(
         (root / "DECISIONS.md").read_text(encoding="utf-8").rstrip("\n") +
         "\n\n- D-1 | {} | \"yes, approve\" | about: brief v1\n- D-2 | {} | \"approve\" | "

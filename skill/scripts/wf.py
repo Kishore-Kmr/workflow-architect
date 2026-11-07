@@ -547,6 +547,10 @@ def check(root):
             problems.append("RULES.md: {} has no 'Origin:' line".format(r["id"]))
     entries, log_problems = parse_log(root)
     problems += log_problems
+    evo, evo_problems = parse_evolution(root)
+    # log lines may name a rule that a later change removed, if EVOLUTION.md records it
+    known_rules = set(ids) | {r for e in evo for k in ("Change", "Undo")
+                              for r in re.findall(r"\bR-\d+\b", e["fields"].get(k, ""))}
     last_time, last_step = "", 0
     for e in entries:
         where = "LOG.md line {}".format(e["line"])
@@ -561,14 +565,13 @@ def check(root):
         if e["step"] == "P" and not state.get("practice"):
             problems.append(where + ": practice line left over (run practice-done)")
         is_practice = e["step"] == "P"
-        for msg in tag_problems(e["tags"], state, ids, is_practice):
+        for msg in tag_problems(e["tags"], state, known_rules, is_practice):
             problems.append(where + ": " + msg)
         if e["part"] != "-" and e["part"] not in set(parts) | (
                 {PRACTICE_PART} if is_practice else set()):
             problems.append(where + ": part '{}' is not in STATE.json".format(e["part"]))
     if not state.get("practice") and (root / PRACTICE_FILE).exists():
         problems.append(PRACTICE_FILE + " left over from the practice round")
-    evo, evo_problems = parse_evolution(root)
     problems += evo_problems + evolution_problems(evo, state)
     problems += guard_problems(root, state, entries)
     return problems
@@ -981,6 +984,10 @@ def cmd_change_add(root, argv):
             raise WfError("evolution level {}: a large change is proposed, not applied "
                           "(--by proposed)".format(level))
     nid = len(ctx["evo"]) + 1
+    for k in ("--evidence", "--undo", "--expect"):
+        if opts.get(k):
+            opts[k] = opts[k].replace("E-<n>", "E-{}".format(nid))
+    what = what.replace("E-<n>", "E-{}".format(nid))
     proposed = by == "proposed"
     applied = {"auto": "auto (level {})".format(level), "you": "you",
                "proposed": "proposed (waiting for the user)"}[by]

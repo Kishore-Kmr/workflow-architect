@@ -22,6 +22,8 @@ Below, `wf` means `{{python}} tools/wf.py`.
      Log the user's actions and words as actor `YOU`.
    - Update STATE.json only if the phase changed (the next step is then a look-back).
    - Rewrite NEXT.md: exactly one next action, its actor (AI or YOU), its part, "Done when".
+     If the next action waits for the user's answer, it is theirs: `Actor: YOU`,
+     `Action: answer: <the question>`. Never leave the action that was just done.
    - Git: {{git policy, e.g. "commit with a message saying what moved; never push" or "do not commit; the user commits" or "no git"}}.
 6. **Health.** Run `wf health`. It checks the files, then reads the log for signs of trouble.
    Fix any file problem and log the fix with `[workflow]`. If it shows a warning or a

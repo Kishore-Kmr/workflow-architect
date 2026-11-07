@@ -286,6 +286,22 @@ class EvolutionTest(ProjectCase):
         self.wf_ok("change", "mark", "E-1", "undone", "came back at S-013")
         self.assertIn("## E-1 | undone", self.evolution())
 
+    def test_removed_rule_keeps_old_log_lines_valid(self):
+        rules = self.root / "RULES.md"
+        original = rules.read_text(encoding="utf-8")
+        rules.write_text(original + "\n## R-3 Check every source exists\nOrigin: E-1.\n",
+                         encoding="utf-8")
+        self.history([self.P + " rule:R-3"])
+        rules.write_text(original, encoding="utf-8")           # R-3 deleted (undone)
+        self.wf_fails("check", expect="no rule R-3")           # unknown without a record
+        code, out = run([self.wf, "change", "add", 'added R-3 "check every source exists"',
+                         "--size", "small", "--by", "auto", "--measure",
+                         "correction:missing-source", "--evidence", "x", "--undo",
+                         "delete R-3, then wf change mark E-<n> undone"])
+        self.assertEqual(code, 0, out)
+        self.assertIn("then wf change mark E-1 undone", self.evolution())
+        self.assertIn("check: OK", self.wf_ok("check"))       # recorded in EVOLUTION.md
+
     def test_level_rules(self):
         self.history([self.P] * 3)
         self.assertNotEqual(self.add_rule_change(size="protected")[0], 0)

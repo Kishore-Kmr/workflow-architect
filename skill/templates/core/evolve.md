@@ -27,10 +27,13 @@ evidence says so. This file says how. Below, `wf` means `{{python}} tools/wf.py`
    | 2 | apply, report with undo | propose | ask |
    | 3 | apply, report with undo | apply, report with undo | ask |
 
-6. Record it first: `wf change add "<what changes>" --size <size> --by auto|proposed
+6. Record it first, whether you apply it, propose it or ask (protected): otherwise the warning
+   comes back at every step. `wf change add "<what changes>" --size <size> --by auto|proposed
    --measure <what should improve, usually the warning id> --evidence "<warning and steps>"
    --undo "<exact steps to reverse it>"`. Write the undo so that someone else could follow it.
-   `wf` refuses an automatic change that the level does not allow.
+   `wf` refuses an automatic change that the level does not allow. For a protected change,
+   the change is the question to the user, e.g. "re-interview: move the finish line to a
+   workshop paper?".
 7. **Applied:** make the change. In the report say what changed, why, and "to undo, say
    'undo E-<n>'". **Proposed:** ask the user in the report, under "Questions for you". When they
    answer, log their words as `YOU` with `[answered]` and add the decision to DECISIONS.md.
