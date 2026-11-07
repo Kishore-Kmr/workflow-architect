@@ -87,8 +87,9 @@ Fill in part 2 of brief-template.md. The core (every project): AGENTS.md, BRIEF.
 STATE.json, LOG.md, DECISIONS.md, QUESTIONS.md, RULES.md, EVOLUTION.md, tools/step.md, tools/wf.py
 (if Python), the end-product parts, and tool adapters. Add only what the brief
 justifies, each with the answer behind it. Modules are not built in v0.1: if the brief shows a
-need for one, say "needed, coming in a later version" and propose its temporary rule and
-just-in-time question (table at the end of brief-template.md). Ask: approve, change, or ask.
+need for one, say "needed, coming in a later version". Propose its temporary rule only if the
+need applies to the first phase; for a later stage, only its just-in-time question (see the end
+of brief-template.md). Ask: approve, change, or ask.
 
 ## Phase 5: generate
 
@@ -116,7 +117,8 @@ refused, stop and offer options; don't work around it.
    - Codex, Copilot and others read AGENTS.md: nothing extra; the user says "do a step".
    - Existing AGENTS.md: ask before changing it; propose adding a short "Workflow" section.
 5. **RULES.md:** the two core rules, rules from the interview (Origin quotes the answer), and
-   temporary rules for missing modules. At most 12.
+   temporary rules for missing modules that apply to the first phase. No rule that repeats the
+   core rules, the protected list or a setting. Few: usually 2 to 5; the cap is 12.
 6. **QUESTIONS.md:** open questions, and just-in-time questions with triggers.
    **DECISIONS.md:** the user's decisions from the interview, word for word and dated,
    including the approvals of the brief and the structure.

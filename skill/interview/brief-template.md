@@ -48,10 +48,10 @@ yet)". Yours to add to at any time; the workflow reads it before each step.>
 - <question>: asked when <stage trigger>
 
 ## First action
-<The smallest action that tells us the most, and who does it.>
+<The smallest action that tells us the most, and who does it.> **OK?**
 
 ## Stop if
-<What would make us stop or rethink.>
+- <What would make us stop or rethink.> **OK?** (mark each one you proposed)
 ```
 
 ## Part 2: the structure proposal (shown in phase 4)
@@ -88,9 +88,17 @@ Then ask: approve, change, or ask about something.
 
 ## Modules: not built in v0.1
 
-They come in a later version. If the brief shows a need, propose the stopgap: a temporary rule in
-RULES.md (Origin: the user's answer, "temporary until the <module> module exists") and a
-just-in-time question in QUESTIONS.md. Use the table for the "Not added" lines too.
+They come in a later version. If the brief shows a need:
+- **It applies to the first phase:** propose its temporary rule for RULES.md (Origin: the user's
+  answer, "temporary until the <module> module exists") and its just-in-time question.
+- **It belongs to a later stage** (e.g. budget before the first paid call, experiment cards
+  before the first experiment): propose only the just-in-time question. The rule is added when
+  that stage comes.
+- Never propose a rule that repeats the core rules, the protected list in AGENTS.md (spending,
+  outward actions, irreversible steps) or a setting (autonomy, reports, git). A new project
+  usually needs 2 to 5 rules in all.
+
+Use the table for the "Not added" lines too.
 
 | Module | Needed when | v0.1 temporary rule | Just-in-time question (trigger) |
 |---|---|---|---|
