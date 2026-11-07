@@ -712,7 +712,8 @@ def warnings(ctx):
              "cut process, so the next steps move the end product")
     for name, at, kind, fix in (
             ("correction", th["correction_warn_at"], "correction",
-             "a rule for the AI (small), with a check if a script can verify it"),
+             "a rule for the AI (small); but if it is about the goal, a limit or a decision, "
+             "ask the user"),
             ("repeat", th["repeat_warn_at"], "instruction",
              "a shortcut command or a rule for the AI (small)")):
         for key in sorted({v for s in steps.values() for n, v in s["tags"] if n == name}):
