@@ -10,8 +10,8 @@ Below, `wf` means `{{python}} tools/wf.py`.
    QUESTIONS.md "Just in time" for a trigger this action would hit, and ask that question first.
    Record answers: decisions word for word in DECISIONS.md, questions moved to "Answered" in
    QUESTIONS.md. Log `[asked]` when you ask and `[answered]` when they answer.
-3. **Limits.** Check the action against the limits in BRIEF.md, RULES.md and the protected list
-   in AGENTS.md. If it would cross one, ask first.
+3. **Limits.** Check the action against the limits and "Your notes" in BRIEF.md, RULES.md and
+   the protected list in AGENTS.md. If it would cross one, ask first.
 4. **Do the action.** One action only, in the end-product part NEXT.md names.
 5. **Record.**
    - Update the end product.

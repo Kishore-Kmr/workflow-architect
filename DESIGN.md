@@ -35,8 +35,9 @@ is missing, removes what is unused, and asks you before any change you have not 
 ### 3.1 Machine check
 
 `scripts/probe.py` (read-only) finds the OS and shell, git, Python, installed AI CLIs, the folder's
-contents and any existing CLAUDE.md, AGENTS.md or `.claude/`. It reports what it found and asks
-only where it matters ("the folder has 14 files: build around them?"). It never changes existing
+contents and any existing CLAUDE.md, AGENTS.md or `.claude/`. It reports what it found in a few
+lines and asks nothing: the first question is always about the goal. What needs you ("the folder
+has 14 files: build around them?") is asked after the goal questions. It never changes existing
 files without asking. It notes which AI tool is running and which others are installed. If Python
 is missing it explains the impact in plain terms (the `tools/wf.py` checks would then be done by
 the agent reading files: slower, costlier, less reliable) and you choose: install it, or skip it.
@@ -51,8 +52,12 @@ There is no fixed questionnaire. The interviewer keeps:
 
 1. What are you making?
 2. What is the goal: what does success look like, and who judges it?
-3. Optional, open: "Anything else you already know: constraints, ideas, worries?" One free-text
-   answer can settle many unknowns; the interviewer reads back what it took from it.
+3. Optional, open: "Anything else the workflow should know?" The single place for specifics and
+   assumptions (deadline, known work, data, people, paid services, constraints, worries), shown
+   as hints, not asked one by one. The interviewer reads back what it took; the answer is kept
+   word for word in BRIEF.md "Your notes", which you can add to at any time.
+
+The seeds are always the first questions.
 
 #### 3.2.2 Coverage map: what a design must eventually know
 
@@ -82,14 +87,18 @@ validated, test-split hygiene; fine-tuning: compute provider, data licence, eval
 
 1. Update the project model; read back anything taken from free text.
 2. Mark each topic *relevant*, *not relevant (with reason)* or *unknown yet*.
-3. List the unknowns whose answer would change the initial structure.
+3. List the unknowns the setup needs now (no sensible default, and the brief or structure
+   cannot be written without them). Unknowns tied to a later stage (experiments, spending,
+   labelling, other people, submission) are not asked now: they become just-in-time questions
+   triggered by that stage. The protected list already makes every spend wait for you.
 4. Rank them by impact (how different the structure would be across answers) and dependency
    (prerequisites first).
 5. Ask at most four, in one batch (with the tool's question feature if it has one, else plain
    text with lettered options): multiple choice with "Other" when answers are predictable,
    open text when not; each with one line on why it is asked and what it changes, and a
    recommended option where there is one.
-6. Stop when no setup-relevant unknown remains. The rest become **just-in-time questions** in
+6. Stop when nothing the setup needs now is unknown (usually after the seeds and at most one
+   short batch). The rest become **just-in-time questions** in
    QUESTIONS.md, each with a trigger (e.g. "the first time a task would spend money").
 
 Rules: vague answers get one follow-up ("good quality" → "how would we check it?"); "decide
@@ -99,11 +108,11 @@ can resume in a fresh session.
 
 #### 3.2.4 Example: same seeds, different paths
 
-| Seed answers | Likely next questions | Skipped |
+| Seed answers | Asked at setup (if not in the notes) | Saved for later, with trigger |
 |---|---|---|
-| A paper on whether AI graders favour long answers; aim: Findings of ACL | closest work you know? data? will experiments call paid LLM APIs? human labels, and your hours? | deployment, users |
-| A budgeting app for myself; I'll use it monthly | platform? existing code? how will we check it works? | venue, labels, spending (unless hosting) |
-| Fine-tune a small model; must beat baseline Y | GPU provider and budget? data licence? evaluation set? limit per training run? | venue (unless a paper is planned) |
+| A study of whether AI graders favour long answers; is it publishable? | usually nothing more | paid APIs and cap (first experiment); labels and hours (first labelling task); venue (once judged worth it) |
+| A budgeting app for myself; I'll use it monthly | existing code: build on it? | hosting (if it ever leaves the laptop) |
+| Fine-tune a small model; must beat baseline Y | none, if the data is here | GPU provider and budget (first training run); data licence (before first use) |
 
 ### 3.3 Brief readback
 
@@ -346,6 +355,12 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   says so, RULES.md gets a temporary rule and QUESTIONS.md a just-in-time question.
 - 2026-11-07: for use, `~/.claude/skills/workflow-architect` is a junction (link) to `skill/`, so
   changes in the repo take effect immediately.
+- 2026-11-07, your comments after your hands-on test: (1) the first question is always about the
+  goal and objective; other questions (e.g. tools) only after. (2) No "which AI tools" question
+  with a restrictive recommendation: more tools do no harm, so adapters are made without asking.
+  (3) Questions that matter only at a later stage (e.g. paid APIs for experiments) are not asked
+  until that stage. (4) Not many specific questions one by one (deadline, closest work...): one
+  single place where you type any other specifics or assumptions.
 
 ## 13. Open questions
 

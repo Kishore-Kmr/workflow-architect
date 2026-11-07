@@ -32,6 +32,10 @@ choice with a free-text "Other"), use it. Otherwise write numbered questions wit
 options, the recommended option first and marked "(recommended)", and say the user may answer
 in their own words. Ask open questions in plain text when answers can't be predicted.
 
+Recommend an option only when it is clearly better for this user. If the inclusive choice does
+no harm (e.g. supporting more tools), don't ask: do it and say so in the brief. Prefer a
+default in the brief (marked **OK?**) over a question.
+
 ## Phase 0: resume
 
 - If `.workflow-architect/interview.json` exists, say which stage it reached and offer to
@@ -41,29 +45,35 @@ in their own words. Ask open questions in plain text when answers can't be predi
 
 ## Phase 1: machine check
 
+The machine check asks nothing: the user's first question is always about the goal (phase 2).
+What needs the user goes to the interview, asked after the seed questions.
+
 1. Find a working Python: try `python3 --version`, `python --version`, `py --version`. On
    Windows, "Python was not found" comes from a fake Store placeholder: it means not installed.
    Run `<python> <skill>/scripts/probe.py .` (read-only).
-2. **No Python:** check the basics by hand (OS, git, folder contents, AGENTS.md / CLAUDE.md),
-   then tell the user, in plain words: "Python isn't installed. The workflow still works without
+2. **No Python:** check the basics by hand (OS, git, folder contents, AGENTS.md / CLAUDE.md).
+   After the seed questions, tell the user, in plain words: "Python isn't installed. The workflow still works without
    it, but its checker (`tools/wf.py`) can't run, so I would do those checks by reading the
    files: slower, more tokens, less reliable. Later versions also use it for the workflow's
    self-checks." Offer: (a) install Python, naming the command for this machine (e.g.
    `winget install Python.Python.3.13`, `brew install python`, `sudo apt install python3`), or
    (b) continue without it. Install only after a yes, then run the probe.
-3. Report the findings in 3 to 6 lines. Ask only where it matters:
-   - the folder has files: build around them? (what to keep is asked in the interview);
-   - more than one AI tool is installed: which will you use in this folder? (decides the
-     adapters). You know which tool you are: state it, don't ask it;
-   - possible secrets that git does not ignore: name them (names only) and plan `.gitignore`.
+3. Report the findings in at most 3 lines, without questions. Note as unknowns for the
+   interview, to ask after the seed questions: existing files (build around them? what to
+   keep?); Python missing. Possible secrets that git does not ignore: name them (names only)
+   and plan `.gitignore`.
+   Never ask which AI tools the user will use: adapters are made for the tool you are running
+   in and for any other installed tool that needs one (see phase 5). You know which tool you
+   are: state it.
 4. Create `.workflow-architect/interview.json` (format in `<skill>/interview/planner.md`) with
    the machine summary and the answers.
 
 ## Phase 2: interview
 
 Read `<skill>/interview/planner.md` and `<skill>/interview/coverage-map.md`, then follow the
-planner: seed questions first, then batches chosen by impact. Save interview.json after each
-batch. Stop when no unknown would change the structure.
+planner: the seed questions first (always the first questions), then at most a short batch of
+what the setup needs now. Anything tied to a later stage is saved for later with that stage as
+its trigger. Save interview.json after each batch.
 
 ## Phase 3: brief
 
@@ -75,7 +85,7 @@ approval in interview.json with the user's words.
 
 Fill in part 2 of brief-template.md. The core (every project): AGENTS.md, BRIEF.md, NEXT.md,
 STATE.json, LOG.md, DECISIONS.md, QUESTIONS.md, RULES.md, EVOLUTION.md, tools/step.md, tools/wf.py
-(if Python), the end-product parts, and adapters for the user's tools. Add only what the brief
+(if Python), the end-product parts, and tool adapters. Add only what the brief
 justifies, each with the answer behind it. Modules are not built in v0.1: if the brief shows a
 need for one, say "needed, coming in a later version" and propose its temporary rule and
 just-in-time question (table at the end of brief-template.md). Ask: approve, change, or ask.
@@ -97,13 +107,13 @@ refused, stop and offer options; don't work around it.
 3. **End product:** create each agreed part (a file with a heading and a one-line purpose, or a
    folder), and list them in STATE.json "parts" as name -> path. Existing files may be parts:
    point to them, don't move them.
-4. **Adapters**, only for the tools the user will use:
+4. **Adapters**, without asking: for the tool you are running in, and for every other installed
+   tool that needs one. In v0.1 only Claude Code has an adapter:
    - Claude Code: `CLAUDE.md` from `<skill>/templates/adapters/claude-code/CLAUDE.md` (if a
      CLAUDE.md exists, ask to add the line `@AGENTS.md` to it instead), and
      `.claude/skills/step/SKILL.md` from `.../claude-code/step-skill.md`. Add `CLAUDE.md` to
      STATE.json "instruction_files".
-   - Other tools (Codex, Copilot and others read AGENTS.md): nothing extra; the user says
-     "do a step".
+   - Codex, Copilot and others read AGENTS.md: nothing extra; the user says "do a step".
    - Existing AGENTS.md: ask before changing it; propose adding a short "Workflow" section.
 5. **RULES.md:** the two core rules, rules from the interview (Origin quotes the answer), and
    temporary rules for missing modules. At most 12.

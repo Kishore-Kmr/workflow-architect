@@ -1,21 +1,30 @@
 # Question planner
 
-There is no fixed questionnaire. You keep a project model and a list of open unknowns, and after
-every batch of answers you choose the next few questions. Topics are in `coverage-map.md`.
+There is no fixed questionnaire, and the interview is short: the seed questions, then at most a
+short batch of what the setup needs now. Everything else is either a default in the brief
+(marked **OK?**) or a question saved for the stage where it matters. Topics are in
+`coverage-map.md`.
 
 ## What you keep (saved in `.workflow-architect/interview.json`)
 
 - **Facts**, each labelled: *you said*, *checked* (by the machine check or by looking), or
   *inferred* (must be confirmed: in the next batch or in the brief, never silently used).
 - **Topics**, each marked *relevant*, *not relevant* (with the reason) or *unknown yet*.
-- **Unknowns**: what you still need to know, with what the answer would change.
-- **Saved for later**: just-in-time questions, each with a trigger.
+- **Unknowns**: what you still need to know, with what the answer would change, and *when* it
+  is needed (now, for the setup; or at a later stage).
+- **Saved for later**: just-in-time questions, each with a stage trigger.
 
-## Seed questions (always asked, first batch)
+## Seed questions (always the first questions, in one batch)
+
+Nothing comes before them: no questions about tools, files or the machine.
 
 1. What are you making?
 2. What is the goal: what does success look like, and who judges it?
-3. Optional, open: "Anything else you already know: constraints, ideas, worries?"
+3. **Anything else the workflow should know?** This is the single place for specifics and
+   assumptions. Show examples as one line of hints, not as separate questions: deadline, work
+   you already know of, data, people involved, paid services, constraints, worries. Say: "Write
+   as much or as little as you like. Whatever you leave out, I'll ask when it becomes relevant.
+   You can add to this later too." The answer is kept word for word in BRIEF.md "Your notes".
 
 All three are open text. If the user's opening message already answers one, read it back as a
 fact to confirm instead of asking it again.
@@ -23,40 +32,45 @@ fact to confirm instead of asking it again.
 ## After every batch of answers
 
 1. **Update the model.** Read back, in a few short lines, what you took from free text
-   ("From your answer I took: no deadline; a co-author must approve the final draft. Right?").
+   ("From your notes I took: a co-author must approve before submission. Right?").
 2. **Mark topics** relevant, not relevant (with reason) or unknown yet.
-3. **List the unknowns whose answer would change the initial structure**: which files or parts
-   exist, which rules or limits are set, what the first action is, which settings are chosen.
-   If no possible answer would change the structure, it is not asked.
-4. **Rank** by impact (how different the structure would be across the likely answers) and by
-   dependency (prerequisites first: ask what kind of project before asking its details).
+3. **Ask now only what the setup needs now**: an answer without which you cannot write the
+   brief, the structure or the first phase's work, *and* for which no sensible default exists.
+   Typical cases: an unclear goal; existing files (what to keep); Python missing.
+   - An unknown tied to a later stage (experiments, spending, data collection, labelling,
+     other people's input, submission, release) is **not asked now**: save it for later, with
+     that stage as the trigger ("when the first experiment is planned").
+   - Safety does not need early questions: the protected list already makes every spend,
+     outward action and irreversible step wait for the user.
+   - If a sensible default exists, put it in the brief marked **OK?** instead of asking.
+4. **Rank** what is left by impact and by dependency (prerequisites first).
 5. **Ask at most four, in one batch.** Multiple choice with "Other" when answers are
-   predictable; open text when not. Each question has one line saying why it is asked and what
-   it changes, and a recommended option where there is one. See "How to ask" in SKILL.md.
-6. **Stop** when no setup-relevant unknown remains. Everything else goes to "saved for later"
-   with a trigger (e.g. "the first time a task would spend money"); these become QUESTIONS.md
-   "Just in time".
+   predictable; open text when not. Each question has one line saying why it is asked and
+   what it changes. Recommend an option only when it is clearly better for this user.
+6. **Stop** when nothing the setup needs now is unknown. Usually that is after the seed batch
+   and at most one more. Then write the brief.
 
 ## Rules
 
-- A vague answer gets one follow-up ("good quality" -> "how would we check it?"). Then accept it.
-- "Decide later" is always allowed: save the question with a trigger, and use a safe default
-  meanwhile only if you name it in the brief as "OK?".
-- Show progress at the start of each batch: "about N open points left".
+- Don't walk through topics one by one (deadline, closest work, budget, hours...). The third
+  seed question is the place for them; what the user doesn't mention is saved for later or
+  becomes a default marked **OK?**.
+- A vague answer to the goal gets one follow-up ("good quality" -> "how would we check it?").
+  Then accept it.
+- "Decide later" is always allowed: save the question with a trigger.
+- Show progress at the start of each batch after the first: "about N open points left".
 - Save interview.json after each batch, so the interview can resume in a fresh session.
-- Don't ask what the machine check already answered. Don't ask about topics marked not
-  relevant. Don't ask about the cost of running the agent.
-- Inferences are confirmed, not assumed.
-- Usually 2 to 4 batches are enough. If you reach a fifth, check that each question still
-  changes the structure.
+- Don't ask what the machine check already answered, or which AI tools the user will use.
+  Don't ask about the cost of running the agent.
+- Inferences are confirmed, not assumed: in the next batch or in the brief.
 
 ## Example: same seeds, different paths
 
-| Seed answers | Likely next questions | Skipped |
+| Seed answers | Asked at setup (only if not in the notes) | Saved for later, with trigger |
 |---|---|---|
-| A paper on whether AI graders favour long answers; aim: Findings of ACL | closest work you know? data? will experiments call paid LLM APIs? human labels, and your hours? | deployment, users |
-| A budgeting app for myself; I'll use it monthly | platform? existing code? how will we check it works? | venue, labels, spending (unless hosting) |
-| Fine-tune a small model; must beat baseline Y | GPU provider and budget? data licence? evaluation set? limit per training run? | venue (unless a paper is planned) |
+| A study of whether AI graders favour long answers; is it publishable? | nothing more, usually: the first phase is a "worth it?" check | paid APIs and a cap (first experiment); human labels and hours (first labelling task); venue (once the topic is judged worth it) |
+| A budgeting app for myself; I'll use it monthly | existing code: build on it? | hosting (if it ever leaves the laptop) |
+| Fine-tune a small model; must beat baseline Y | none, if the data is already here | GPU provider and budget (first training run); data licence (before first use) |
 
 ## interview.json format
 
@@ -67,11 +81,12 @@ fact to confirm instead of asking it again.
   "updated": "YYYY-MM-DD HH:MM",
   "machine": {"summary": "the probe's lines", "python": "python or null",
               "tools": ["claude-code"]},
+  "notes": "the user's answer to seed question 3, word for word",
   "facts": [{"id": "F-1", "topic": "end-product", "fact": "...",
              "source": "you said | checked | inferred", "confirmed": true}],
   "topics": {"end-product": {"status": "relevant | not-relevant | unknown", "reason": "..."}},
   "unknowns": [{"id": "U-1", "topic": "...", "question": "...",
-                "changes": "what the answer would change", "needs": ["U-0"]}],
+                "changes": "what the answer would change", "when": "now | <stage>"}],
   "batches": [{"n": 1, "asked": ["..."], "answers": ["the user's words, verbatim"],
                "took": ["F-3", "F-4"]}],
   "later": [{"question": "...", "trigger": "...", "why": "..."}],

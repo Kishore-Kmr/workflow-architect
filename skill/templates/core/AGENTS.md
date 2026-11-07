@@ -10,7 +10,9 @@ them instead of relying on earlier conversations. Sessions can be short and fres
 1. Read `NEXT.md`: the one next action and who does it (AI or YOU).
 2. Run `{{python}} tools/wf.py status` for a three-line status.
 3. To move the project forward, do one step: follow `tools/step.md`.{{ Tool shortcut, e.g. " In Claude Code: `/step`." or delete}}
-4. Before any work, read `RULES.md`. Read `BRIEF.md` when you need the goal, limits or style.
+4. Before any work, read `RULES.md` and the "Your notes" section of `BRIEF.md` (the user's own
+   notes and assumptions; they may add to it at any time). Read the rest of `BRIEF.md` when
+   you need the goal, limits or style.
 
 ## Core rule: when unsure, ask; don't assume
 

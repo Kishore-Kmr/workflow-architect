@@ -22,7 +22,12 @@ Version <n> | <date> | <"Draft for your approval" or "Approved <date>">
 - External spending: <cap, approval rule> (only if relevant)
 - Do not: <what must not be touched or done>
 
+## Your notes
+<The user's answer to "Anything else the workflow should know?", word for word, or "(none
+yet)". Yours to add to at any time; the workflow reads it before each step.>
+
 ## How you want to work
+- Tools: <the tool you run in; adapters made; "other AI tools read AGENTS.md">
 - Steps: <stop after each step | keep going until something needs you>
 - Asking: <how strict "ask first" is>
 - Reports: <short | detailed>
@@ -39,8 +44,8 @@ Version <n> | <date> | <"Draft for your approval" or "Approved <date>">
 ## Open questions
 - <question>: <why it matters>
 
-## Saved for later
-- <question>: asked when <trigger>
+## Saved for later (asked when the stage comes)
+- <question>: asked when <stage trigger>
 
 ## First action
 <The smallest action that tells us the most, and who does it.>
