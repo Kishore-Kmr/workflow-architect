@@ -1,7 +1,8 @@
 # workflow-architect — design
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
-Status: v0.1 built and self-tested (`skill/evals/test_scripts.py`); hands-on toy test next. Decisions so far: section 12. Open questions: section 13.
+Status: v0.1 built and tested (section 9: simulated runs and your hands-on run, see `tests/`);
+v0.1 testing closed 2026-11-07. Next: v0.2 (section 10). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
@@ -361,7 +362,7 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   (3) Questions that matter only at a later stage (e.g. paid APIs for experiments) are not asked
   until that stage. (4) Not many specific questions one by one (deadline, closest work...): one
   single place where you type any other specifics or assumptions.
-- 2026-11-07, builder's change following comment (3), awaiting your OK: the same applies to
+- 2026-11-07, builder's change following comment (3), approved by you the same day: the same applies to
   temporary rules. A rule for a missing module is added at setup only if it applies to the
   first phase; a later-stage need gets only its just-in-time question. No rule may repeat the
   core rules, the protected list or a setting. (Retest: 11 rules were proposed before this.)

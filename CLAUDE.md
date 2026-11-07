@@ -6,8 +6,8 @@ interviews the user adaptively, builds the smallest workflow that fits, and lets
 check itself and evolve.
 
 **Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-07: design draft 4;
-v0.1 built and self-tested (`python skill/evals/test_scripts.py`). Simulated test and the user's
-first hands-on run done; comments fixed and retested (`tests/`). Next: the user re-checks, then v0.2.
+v0.1 built and self-tested (`python skill/evals/test_scripts.py`). v0.1 testing closed
+(simulated runs and the user's hands-on run, see `tests/`). Next: build v0.2 (section 10).
 
 ## How to work here
 
