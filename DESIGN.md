@@ -1,7 +1,7 @@
 # workflow-architect — design
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
-Status: v0.1 being built (section 10). Decisions so far: section 12. Open questions: section 13.
+Status: v0.1 built and self-tested (`skill/evals/test_scripts.py`); hands-on toy test next. Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 

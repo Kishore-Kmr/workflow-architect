@@ -1,0 +1,19 @@
+{
+  "workflow_architect": "0.1",
+  "project": "{{short project name}}",
+  "phase": "{{first phase name from the brief}}",
+  "step": 0,
+  "practice": false,
+  "brief_version": 1,
+  "structure_version": 1,
+  "autonomy": "{{one-step or until-you}}",
+  "evolution_level": 2,
+  "tools": ["{{tool ids, e.g. claude-code}}"],
+  "instruction_files": ["AGENTS.md"],
+  "python": "{{python command, or null without Python}}",
+  "git": "{{each-step, manual or none}}",
+  "parts": {"{{part-name}}": "{{path to the part}}"},
+  "modules": [],
+  "needed_later": [],
+  "limits": {}
+}
