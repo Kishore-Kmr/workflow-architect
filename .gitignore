@@ -1,0 +1,6 @@
+# Local Claude Code settings: holds secrets (API keys) and machine-specific permissions
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
