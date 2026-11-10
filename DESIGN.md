@@ -173,19 +173,16 @@ Rule in every AGENTS.md: **when unsure, ask; don't assume.** Agents stop and ask
 does not cover the case, when two readings lead to different work, when an action would exceed a
 limit, or when it cannot be undone. How strict this is comes from the interview.
 
-## 5. Modules (added when needed, removed when unused)
+## 5. Add-ons (added when needed, removed when unused)
 
-| Module | Added when | Adds |
+| Add-on | Added when | Adds |
 |---|---|---|
-| Independent reviewer | errors would be costly or hard to see; or an error escaped | sees the work and the criteria, not the driver's reasoning; cannot edit; ideally another model; calibrated with your good and bad examples |
-| Workers | big, repetitive or parallel tasks | agent definitions in the tool's format (e.g. `.claude/agents/`: model, tools) and task cards |
-| Decision points | go/no-go moments | options continue, narrow, pivot, stop; you decide |
-| External budget | the first paid external resource | caps, check before spending, spend log |
-| Human hours | tasks need your work | hours tally; warning before tasks over your limit |
-| Time limits and two strikes | overruns; a task fails twice | per-phase limits; decide whether the task is needed |
-| Experiment cards | the first experiment | before running: what each possible result would mean |
-| "Worth it?" check | uncertain value | closest existing work and who would care, before deep work |
-| Checks and hooks | a checkable rule broken twice | a `wf.py check` rule or a Claude Code hook |
+| Budget | the first paid external resource | a cap and an "ask first" amount; `SPENDING.md`; `wf.py spend` refuses to go over the cap; a warning at 80% |
+| Second opinion | errors would be costly or hard to see, or an error slipped past | a second AI sees only the work, its "Done when", the goal and the sources, never the log or the driver's reasoning; cannot edit; ideally another model; your examples of missed errors go into its instructions; verdicts in `SECOND-OPINIONS.md` |
+| Experiment plans | the first experiment | `experiments/X-<n>.md`: what each possible result would mean, locked by `wf.py experiment start` before the run |
+
+No add-on needed (core): at the end of each phase the brief's "Stop if" list is checked and the
+go/no-go decision is put to you; every task for you carries a time estimate.
 
 ## 6. How agents talk
 
@@ -340,8 +337,8 @@ skill/
 2. **v0.2:** evolution engine: `wf.py health`, warnings, `/evolve`, change levels, trial and
    rollback, look-back, re-interview. Built 2026-11-07; the metrics that need modules wait
    for v0.3.
-3. **v0.3:** modules (section 5), called add-ons in what the user sees. Domain packs are set
-   aside (section 12, 2026-11-10).
+3. **v0.3:** the three add-ons (section 5) and the two core lines; the plainer words of
+   2026-11-10. Domain packs and the other modules are set aside or discarded (section 12).
 4. **v0.4:** full tests (section 9), lesson import, learning across projects, docs.
 
 ## 11. Not in scope for now
@@ -394,6 +391,11 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   tools/progress-review.md.
 - 2026-11-10: domain packs set aside, in your words: "I think the AI already knows what should
   be needed for each type of project." v0.3 builds only the add-ons (modules).
+- 2026-11-10: v0.3 shrunk, approved by you ("go with the shrinked version. Discard the rest"):
+  three add-ons (budget, second opinion, experiment plans); go/no-go points and your hours
+  become two core lines (check the brief's "Stop if" list at each phase end and ask you; a time
+  estimate on every task for you). Discarded: workers/helpers, two strikes and time limits,
+  checks and hooks as an add-on (a workflow fix can add a check), "worth it?" check.
 
 ## 13. Open questions
 
