@@ -16,7 +16,7 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parent.parent
 CORE = SKILL / "templates" / "core"
 PLACEHOLDER = re.compile(r"\{\{[^}]*\}\}")
-TOOL_FILES = ("step.md", "evolve.md", "lookback.md")
+TOOL_FILES = ("step.md", "fixes.md", "progress-review.md")
 
 
 def run(args, cwd=None):
@@ -43,7 +43,7 @@ def make_project(root):
             text = re.sub(r"<!-- no-python -->.*<!-- /no-python -->\n?", "", text, flags=re.S)
         if f.name == "STATE.json":
             state = json.loads(PLACEHOLDER.sub("x", text))
-            state.update({"project": "Toy", "phase": "drafting", "lookback_phase": "drafting",
+            state.update({"project": "Toy", "phase": "drafting", "review_phase": "drafting",
                           "autonomy": "one-step",
                           "tools": ["claude-code"], "python": "python", "git": "none",
                           "parts": {"outline": "deliverable/outline.md"},
@@ -175,8 +175,8 @@ class WfTest(ProjectCase):
 F = "%Y-%m-%d %H:%M"
 
 
-class EvolutionTest(ProjectCase):
-    """v0.2: health warnings, change records, check-backs, level rules, look-back, guard."""
+class FixTest(ProjectCase):
+    """v0.2: health warnings, workflow fixes, re-checks, fix levels, progress review, guard."""
 
     def state(self, **changes):
         p = self.root / "STATE.json"
@@ -229,11 +229,11 @@ class EvolutionTest(ProjectCase):
     def warning_ids(self):
         return [w["id"] for w in self.health()["warnings"]]
 
-    def evolution(self):
-        return (self.root / "EVOLUTION.md").read_text(encoding="utf-8")
+    def fixes(self):
+        return (self.root / "WORKFLOW-FIXES.md").read_text(encoding="utf-8")
 
-    def add_rule_change(self, by="auto", size="small"):
-        return run([self.wf, "change", "add", 'added R-3 "check every source exists"',
+    def add_rule_change(self, by="ai", size="small"):
+        return run([self.wf, "fix", "add", 'added R-3 "check every source exists"',
                     "--size", size, "--by", by, "--measure", "correction:missing-source",
                     "--evidence", "same correction twice (S-004, S-008)",
                     "--undo", "delete R-3 from RULES.md"])
@@ -252,83 +252,83 @@ class EvolutionTest(ProjectCase):
         self.assertIn("correction:missing-source", self.warning_ids())
         code, out = self.add_rule_change()
         self.assertEqual(code, 0, out)
-        evo = self.evolution()
-        self.assertIn("## E-1 | trial", evo)
+        evo = self.fixes()
+        self.assertIn("## F-1 | testing", evo)
         self.assertIn("- Before: 0.20 (2 of the last 10 steps)", evo)
-        self.assertIn("- Check at: S-015", evo)
-        self.assertIn("- Applied by: auto (level 2)", evo)
-        self.assertNotIn("No changes yet.", evo)
-        self.assertIn("applied workflow change E-1 (small)", self.log_text())
+        self.assertIn("- Re-check at: S-015", evo)
+        self.assertIn("- Made by: AI (level 2)", evo)
+        self.assertNotIn("No fixes yet.", evo)
+        self.assertIn("made workflow fix F-1 (small)", self.log_text())
         self.assertNotIn("correction:missing-source", self.warning_ids())
         self.assertIn("check: OK", self.wf_ok("check"))
         self.history([P] * 4)
-        self.assertEqual(self.health()["checkbacks"], [])
+        self.assertEqual(self.health()["rechecks"], [])
         self.history([P])
-        [cb] = self.health()["checkbacks"]
-        self.assertEqual((cb["id"], cb["verdict"]), ("E-1", "helped"))
-        self.assertIn("check-back of E-1", self.wf_ok("status"))
-        self.wf_ok("change", "mark", "E-1", "kept", "0.20 before, 0.00 since")
-        evo = self.evolution()
-        self.assertIn("## E-1 | kept", evo)
+        [cb] = self.health()["rechecks"]
+        self.assertEqual((cb["id"], cb["verdict"]), ("F-1", "helped"))
+        self.assertIn("re-check of F-1", self.wf_ok("status"))
+        self.wf_ok("fix", "mark", "F-1", "kept", "0.20 before, 0.00 since")
+        evo = self.fixes()
+        self.assertIn("## F-1 | kept", evo)
         self.assertRegex(evo, r"- Outcome: kept at S-015 \(.*\): 0.20 before, 0.00 since")
-        self.wf_fails("change", "mark", "E-1", "trial", "x", expect="it can move to: undone")
+        self.wf_fails("fix", "mark", "F-1", "testing", "x", expect="it can move to: undone")
         self.assertIn("check: OK", self.wf_ok("check"))
 
-    def test_checkback_not_helped_says_undo(self):
+    def test_recheck_not_helped_says_undo(self):
         P = self.P
         self.history([P, P, P, P + " correction:missing-source", P, P, P,
                       P + " correction:missing-source", P, P])
         self.add_rule_change()
         self.history([P, P, P + " correction:missing-source", P, P])
-        [cb] = self.health()["checkbacks"]
+        [cb] = self.health()["rechecks"]
         self.assertEqual(cb["verdict"], "not helped")
-        self.assertIn("undo it (it was applied automatically)", cb["text"])
-        self.wf_ok("change", "mark", "E-1", "undone", "came back at S-013")
-        self.assertIn("## E-1 | undone", self.evolution())
+        self.assertIn("undo it (the AI made it)", cb["text"])
+        self.wf_ok("fix", "mark", "F-1", "undone", "came back at S-013")
+        self.assertIn("## F-1 | undone", self.fixes())
 
     def test_removed_rule_keeps_old_log_lines_valid(self):
         rules = self.root / "RULES.md"
         original = rules.read_text(encoding="utf-8")
-        rules.write_text(original + "\n## R-3 Check every source exists\nOrigin: E-1.\n",
+        rules.write_text(original + "\n## R-3 Check every source exists\nOrigin: F-1.\n",
                          encoding="utf-8")
         self.history([self.P + " rule:R-3"])
         rules.write_text(original, encoding="utf-8")           # R-3 deleted (undone)
         self.wf_fails("check", expect="no rule R-3")           # unknown without a record
-        code, out = run([self.wf, "change", "add", 'added R-3 "check every source exists"',
-                         "--size", "small", "--by", "auto", "--measure",
+        code, out = run([self.wf, "fix", "add", 'added R-3 "check every source exists"',
+                         "--size", "small", "--by", "ai", "--measure",
                          "correction:missing-source", "--evidence", "x", "--undo",
-                         "delete R-3, then wf change mark E-<n> undone"])
+                         "delete R-3, then wf fix mark F-<n> undone"])
         self.assertEqual(code, 0, out)
-        self.assertIn("then wf change mark E-1 undone", self.evolution())
-        self.assertIn("check: OK", self.wf_ok("check"))       # recorded in EVOLUTION.md
+        self.assertIn("then wf fix mark F-1 undone", self.fixes())
+        self.assertIn("check: OK", self.wf_ok("check"))       # recorded in WORKFLOW-FIXES.md
 
     def test_level_rules(self):
         self.history([self.P] * 3)
-        self.assertNotEqual(self.add_rule_change(size="protected")[0], 0)
-        code, out = self.add_rule_change(size="large")
+        self.assertNotEqual(self.add_rule_change(size="yours")[0], 0)
+        code, out = self.add_rule_change(size="big")
         self.assertNotEqual(code, 0)
-        self.assertIn("a large change is proposed", out)
-        self.assertEqual(self.add_rule_change(size="large", by="proposed")[0], 0)
-        evo = self.evolution()
-        self.assertIn("## E-1 | proposed", evo)
+        self.assertIn("a big fix is proposed", out)
+        self.assertEqual(self.add_rule_change(size="big", by="proposed")[0], 0)
+        evo = self.fixes()
+        self.assertIn("## F-1 | proposed", evo)
         self.assertIn("- Before: -", evo)
-        self.assertEqual(self.health()["waiting"], ["E-1"])
-        self.assertIn("E-1 waits for the user's answer", self.wf_ok("status"))
-        self.wf_fails("change", "mark", "E-1", "kept", "x", expect="rejected, trial")
-        self.wf_ok("change", "mark", "E-1", "trial", "yes, do it")
-        evo = self.evolution()
-        self.assertIn("- Applied by: you (approved)", evo)
-        self.assertIn("- Check at: S-008", evo)
+        self.assertEqual(self.health()["waiting"], ["F-1"])
+        self.assertIn("F-1 waits for the user's answer", self.wf_ok("status"))
+        self.wf_fails("fix", "mark", "F-1", "kept", "x", expect="rejected, testing")
+        self.wf_ok("fix", "mark", "F-1", "testing", "yes, do it")
+        evo = self.fixes()
+        self.assertIn("- Made by: you (approved)", evo)
+        self.assertIn("- Re-check at: S-008", evo)
         self.assertIn("check: OK", self.wf_ok("check"))
-        self.state(evolution_level=1)
+        self.state(fix_level=1)
         code, out = self.add_rule_change()
-        self.assertIn("level 1: every change is proposed", out)
-        self.state(evolution_level=2)
-        # a hand-written automatic large change is caught by the check
-        p = self.root / "EVOLUTION.md"
-        p.write_text(self.evolution().replace("- Size: large", "- Size: large").replace(
-            "- Applied by: you (approved)", "- Applied by: auto (level 2)"), encoding="utf-8")
-        self.wf_fails("check", expect="a large change is proposed, not applied")
+        self.assertIn("level 1: every fix is proposed", out)
+        self.state(fix_level=2)
+        # a hand-written big fix by the AI is caught by the check
+        p = self.root / "WORKFLOW-FIXES.md"
+        p.write_text(self.fixes().replace("- Size: big", "- Size: big").replace(
+            "- Made by: you (approved)", "- Made by: AI (level 2)"), encoding="utf-8")
+        self.wf_fails("check", expect="a big fix is proposed, not made by the AI")
 
     def test_other_warnings(self):
         P = self.P
@@ -371,19 +371,19 @@ class EvolutionTest(ProjectCase):
         self.assertNotIn("silent:R-3", self.warning_ids())
         self.assertIn("check: OK", self.wf_ok("check"))
 
-    def test_lookback_due(self):
+    def test_review_due(self):
         self.history([self.P] * 9)
-        self.assertFalse(self.health()["lookback_due"])
+        self.assertFalse(self.health()["review_due"])
         self.history([self.P])
-        self.assertTrue(self.health()["lookback_due"])
-        self.assertIn("Due: look-back (10 steps since the last one)", self.wf_ok("status"))
-        self.wf_ok("log", "AI", "look-back L-1: fine", "--tags", "workflow lookback")
-        self.assertFalse(self.health()["lookback_due"])
+        self.assertTrue(self.health()["review_due"])
+        self.assertIn("Due: progress review (10 steps since the last one)", self.wf_ok("status"))
+        self.wf_ok("log", "AI", "progress review 1: fine", "--tags", "workflow review")
+        self.assertFalse(self.health()["review_due"])
         self.state(phase="pilot")
         self.assertIn("phase 'drafting' ended", self.wf_ok("status"))
-        self.wf_ok("log", "AI", "look-back L-2: end of drafting", "--tags", "workflow lookback")
-        self.assertEqual(self.state()["lookback_phase"], "pilot")
-        self.assertFalse(self.health()["lookback_due"])
+        self.wf_ok("log", "AI", "progress review 2: end of drafting", "--tags", "workflow review")
+        self.assertEqual(self.state()["review_phase"], "pilot")
+        self.assertFalse(self.health()["review_due"])
 
     def test_guard_on_the_users_files(self):
         self.history([self.P])
@@ -395,8 +395,8 @@ class EvolutionTest(ProjectCase):
         self.wf_ok("log", "YOU", "approved the new finish line", "--tags", "answered")
         self.assertIn("check: OK", self.wf_ok("check"))
         self.wf_ok("begin")
-        self.state(evolution_level=3)
-        self.wf_fails("check", expect="STATE.json evolution_level changed")
+        self.state(fix_level=3)
+        self.wf_fails("check", expect="STATE.json fix_level changed")
 
 
 if __name__ == "__main__":

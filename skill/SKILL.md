@@ -41,8 +41,9 @@ default in the brief (marked **OK?**) over a question.
 - If `.workflow-architect/interview.json` exists, say which stage it reached and offer to
   resume. Starting over keeps the old file, renamed `interview.old.json`, after asking.
 - If `STATE.json` and `NEXT.md` already exist, the folder is already set up: say so, say that
-  the user can review or change its workflow with `/evolve` (Claude Code) or by saying "evolve
-  the workflow" (it also re-asks questions when the goal or a key fact changed), and stop.
+  the user can look at or change its workflow with `/workflow` (Claude Code) or by saying
+  "check the workflow" (it also re-asks questions when the goal or a key fact changed), and
+  stop.
 
 ## Phase 1: machine check
 
@@ -85,8 +86,8 @@ approval in interview.json with the user's words.
 ## Phase 4: structure proposal
 
 Fill in part 2 of brief-template.md. The core (every project): AGENTS.md, BRIEF.md, NEXT.md,
-STATE.json, LOG.md, DECISIONS.md, QUESTIONS.md, RULES.md, EVOLUTION.md, tools/step.md,
-tools/evolve.md, tools/lookback.md, tools/wf.py (if Python), the end-product parts, and tool
+STATE.json, LOG.md, DECISIONS.md, QUESTIONS.md, RULES.md, WORKFLOW-FIXES.md, tools/step.md,
+tools/fixes.md, tools/progress-review.md, tools/wf.py (if Python), the end-product parts, and tool
 adapters. Add only what the brief
 justifies, each with the answer behind it. Modules are not built yet (v0.3): if the brief shows a
 need for one, say "needed, coming in a later version". Propose its temporary rule only if the
@@ -102,13 +103,13 @@ refused, stop and offer options; don't work around it.
 
 1. **Core files.** `BRIEF.md` is the approved brief. The rest come from `<skill>/templates/core/`:
    replace every `{{...}}` with content from the brief, or delete it where the placeholder says
-   so. `step.md`, `evolve.md` and `lookback.md` go to `tools/`. In STATE.json,
-   "lookback_every" is the look-back interval from the brief (default 10) and "lookback_phase"
-   is the first phase.
+   so. `step.md`, `fixes.md` and `progress-review.md` go to `tools/`. In STATE.json,
+   "review_every" is the progress review interval from the brief (default 10) and
+   "review_phase" is the first phase.
    Copy `<skill>/scripts/wf.py` to `tools/wf.py` with a file-copy command; don't retype it.
 2. **Python or not.** With Python: delete the `<!-- no-python -->` block (and its markers) from
    tools/step.md. Without: keep the block, don't copy wf.py, set STATE.json "python" to null,
-   and in AGENTS.md, step.md, evolve.md and lookback.md say the `wf` commands are done by hand
+   and in AGENTS.md, step.md, fixes.md and progress-review.md say the `wf` commands are done by hand
    (see tools/step.md).
 3. **End product:** create each agreed part (a file with a heading and a one-line purpose, or a
    folder), and list them in STATE.json "parts" as name -> path. Existing files may be parts:
@@ -118,14 +119,14 @@ refused, stop and offer options; don't work around it.
    - Claude Code: `CLAUDE.md` from `<skill>/templates/adapters/claude-code/CLAUDE.md` (if a
      CLAUDE.md exists, ask to add the line `@AGENTS.md` to it instead), and
      `.claude/skills/step/SKILL.md` from `.../claude-code/step-skill.md`, and
-     `.claude/skills/evolve/SKILL.md` from `.../claude-code/evolve-skill.md`. Add `CLAUDE.md`
+     `.claude/skills/workflow/SKILL.md` from `.../claude-code/workflow-skill.md`. Add `CLAUDE.md`
      to STATE.json "instruction_files".
    - Codex, Copilot and others read AGENTS.md: nothing extra; the user says "do a step" or
-     "evolve the workflow".
+     "check the workflow".
    - Existing AGENTS.md: ask before changing it; propose adding a short "Workflow" section.
 5. **RULES.md:** the two core rules, rules from the interview (Origin quotes the answer), and
    temporary rules for missing modules that apply to the first phase. No rule that repeats the
-   core rules, the protected list or a setting. Few: usually 2 to 5; the cap is 12.
+   core rules, the "Always ask first" list or a setting. Few: usually 2 to 5; the cap is 12.
 6. **QUESTIONS.md:** open questions, and just-in-time questions with triggers.
    **DECISIONS.md:** the user's decisions from the interview, word for word and dated,
    including the approvals of the brief and the structure.
@@ -156,6 +157,6 @@ Test every part on this machine with a dummy task (`wf` = `<python> tools/wf.py`
 In at most 8 lines: what was built (number of files); the first action and who does it; how to
 continue: open a fresh session in this folder and type `/step` (Claude Code) or say "do a step"
 (other tools); everything is kept in the files, so sessions can be short; the workflow checks
-itself after each step, reports any change it makes to itself with an undo, and `/evolve`
-("evolve the workflow") reviews or changes it; what they will be asked later and when. Set
+itself after each step, reports any fix it makes to itself with an undo, and `/workflow`
+("check the workflow") shows or changes it; what they will be asked later and when. Set
 interview.json "stage" to "done".

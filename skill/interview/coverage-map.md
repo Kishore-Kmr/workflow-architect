@@ -62,7 +62,7 @@ stage.
 - Find out: which; a spending cap; whether each spend needs approval.
 - Feeds: STATE.json "limits"; the budget module (v0.3; until then a temporary rule).
 - When: later: "when the first task that would spend money is planned" (e.g. the first
-  experiment). Until then the protected list already requires asking before any spend.
+  experiment). Until then the "Always ask first" list already requires asking before any spend.
 
 ## data-legal-ethics: Data, access, legal, ethics
 - Relevant: datasets, people as subjects, licences, private or personal data.
@@ -96,9 +96,9 @@ stage.
 ## working-preferences: Working preferences
 - Relevant: always.
 - Find out: report style; git (commit each step, the user commits, or no git; create a repo
-  if there is none?); evolution level.
+  if there is none?); how freely the workflow fixes itself.
 - Feeds: the report format, the git line in tools/step.md, STATE.json "git" and
-  "evolution_level".
+  "fix_level".
 - When: brief: short reports; git as fits the folder; level 2 (small reversible workflow
   changes apply by themselves with an undo; bigger ones are proposed), each **OK?**.
 

@@ -8,15 +8,15 @@ Commands (run from anywhere; the project is the folder above tools/, or pass --r
                        append one event line to LOG.md (tags are checked)
   check                mechanical checks of the workflow files (read-only)
   health [--json]      the check, then the workflow's health from LOG.md: warnings,
-                       check-backs of changes on trial, look-back due, proposals waiting
-                       (read-only)
-  change add WHAT --size small|large|protected --by auto|you|proposed --measure M
-             --evidence TEXT --undo TEXT [--expect TEXT]
-                       record a workflow change in EVOLUTION.md and LOG.md; refused when the
-                       evolution level does not allow applying it automatically
-  change mark E-N STATUS NOTE
-                       move a change on: proposed -> trial (the user approved) or rejected;
-                       trial -> kept or undone; kept -> undone
+                       re-checks of fixes being tested, progress review due, proposals
+                       waiting (read-only)
+  fix add WHAT --size small|big|yours --by ai|you|proposed --measure M
+          --evidence TEXT --undo TEXT [--expect TEXT]
+                       record a workflow fix in WORKFLOW-FIXES.md and LOG.md; refused when
+                       the fix level does not allow the AI to make it
+  fix mark F-N STATUS NOTE
+                       move a fix on: proposed -> testing (the user approved) or rejected;
+                       testing -> kept or undone; kept -> undone
   practice-done        end the practice round: remove its log lines and files, record it passed
 
 Measures (M): progress, rework, workflow, overrun, escaped, questions, correction:<key>,
@@ -33,19 +33,19 @@ from pathlib import Path
 
 VERSION = "0.2"
 CORE_FILES = ["BRIEF.md", "NEXT.md", "STATE.json", "LOG.md", "DECISIONS.md", "QUESTIONS.md",
-              "RULES.md", "EVOLUTION.md", "tools/step.md", "tools/evolve.md",
-              "tools/lookback.md"]
+              "RULES.md", "WORKFLOW-FIXES.md", "tools/step.md", "tools/fixes.md",
+              "tools/progress-review.md"]
 MAX_INSTRUCTION_LINES = 80
 MAX_RULES = 12
 PRACTICE_PART = "practice"
 PRACTICE_FILE = ".workflow-architect/practice.md"
 GUARD_FILE = ".workflow-architect/guard.json"
 GUARDED_FILES = ["BRIEF.md", "DECISIONS.md"]       # the user's: goal, limits, notes, decisions
-GUARDED_STATE = ["evolution_level", "limits"]
+GUARDED_STATE = ["fix_level", "limits"]
 # tag name -> does it need a value (tag:value)?
 TAGS = {"progress": True, "workflow": False, "fail": False, "redo": False, "correction": True,
         "repeat": True, "asked": False, "answered": False, "escaped": True, "used": True,
-        "overrun": False, "rule": True, "begin": False, "lookback": False, "noted": True}
+        "overrun": False, "rule": True, "begin": False, "review": False, "noted": True}
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 MEASURE_RE = re.compile(r"^(progress|rework|workflow|overrun|escaped|questions|"
                         r"(correction|repeat):[a-z0-9][a-z0-9-]*)$")
@@ -57,26 +57,26 @@ ENTRY_RE = re.compile(r"^- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| 
                       r"([A-Za-z][\w-]*) \| (.+?) \| (\S+) \|(.*)$")
 TAG_RE = re.compile(r"\[([a-z]+)(?::([^\]\s]+))?\]")
 RULE_HEAD = re.compile(r"^## (R-\d+)\b[ \t]*(.*)$", re.M)
-EVO_HEAD = re.compile(r"^## (E-\d+)[ \t]*\|[ \t]*(\S+)[ \t]*$")
-FIELD_RE = re.compile(r"^- ([A-Z][A-Za-z ]*?): ?(.*)$")
-EVO_FIELDS = ["Step", "Evidence", "Change", "Size", "Applied by", "Expect", "Measure", "Before",
-              "Check at", "Undo", "Outcome"]
-STATUSES = {"proposed", "trial", "kept", "undone", "rejected"}
-SIZES = {"small", "large", "protected"}
-APPLIERS = {"auto", "you", "proposed"}
-TRANSITIONS = {"proposed": {"trial", "rejected"}, "trial": {"kept", "undone"},
+EVO_HEAD = re.compile(r"^## (F-\d+)[ \t]*\|[ \t]*(\S+)[ \t]*$")
+FIELD_RE = re.compile(r"^- ([A-Z][A-Za-z -]*?): ?(.*)$")
+EVO_FIELDS = ["Step", "Evidence", "Change", "Size", "Made by", "Expect", "Measure", "Before",
+              "Re-check at", "Undo", "Outcome"]
+STATUSES = {"proposed", "testing", "kept", "undone", "rejected"}
+SIZES = {"small", "big", "yours"}
+APPLIERS = {"ai", "you", "proposed"}
+TRANSITIONS = {"proposed": {"testing", "rejected"}, "testing": {"kept", "undone"},
                "kept": {"undone"}}
 STATE_SCHEMA = {  # key -> allowed types (all required)
     "workflow_architect": (str,), "project": (str,), "phase": (str,), "step": (int,),
     "practice": (bool,), "brief_version": (int,), "structure_version": (int,),
-    "autonomy": (str,), "evolution_level": (int,), "lookback_every": (int,),
-    "lookback_phase": (str,), "check_after": (int,), "tools": (list,), "instruction_files": (list,),
+    "autonomy": (str,), "fix_level": (int,), "review_every": (int,),
+    "review_phase": (str,), "recheck_after": (int,), "tools": (list,), "instruction_files": (list,),
     "python": (str, type(None)), "git": (str,), "parts": (dict,), "modules": (list,),
     "needed_later": (list,), "limits": (dict,),
 }
-CHOICES = {"autonomy": {"one-step", "until-you"}, "evolution_level": {1, 2, 3},
+CHOICES = {"autonomy": {"one-step", "until-you"}, "fix_level": {1, 2, 3},
            "git": {"each-step", "manual", "none"}}
-# Starting values; STATE.json "thresholds" may override them (a large change, see evolve.md).
+# Starting values; STATE.json "thresholds" may override them (a big fix, see tools/fixes.md).
 THRESHOLDS = {
     "window": 10,                 # steps looked at for rates
     "min_steps": 5,               # the progress warning needs at least this many steps
@@ -274,8 +274,8 @@ def add_log(root, state, actor, what, part="-", tags=()):
     line = "- {} | {} | {} | {} | {} |{}".format(now(), current_step_id(state), actor, what,
                                                  part, " " + tagtext if tagtext else "")
     append_line(root / "LOG.md", line)
-    if ("lookback", None) in parsed and not practice:
-        state["lookback_phase"] = state.get("phase")   # the next phase change makes one due
+    if ("review", None) in parsed and not practice:
+        state["review_phase"] = state.get("phase")   # the next phase change makes one due
         save_state(root, state)
     return line
 
@@ -349,18 +349,18 @@ def read_next(root):
     return actor, action, problems
 
 
-# ---------- evolution records ----------
+# ---------- workflow fixes ----------
 
 def _num(pattern, text):
     m = re.search(pattern, text or "")
     return int(m.group(1)) if m else None
 
 
-def parse_evolution(root):
-    """Return (entries, problems) for the E-<n> changes in EVOLUTION.md."""
-    p = root / "EVOLUTION.md"
+def parse_fixes(root):
+    """Return (entries, problems) for the F-<n> fixes in WORKFLOW-FIXES.md."""
+    p = root / "WORKFLOW-FIXES.md"
     if not p.exists():
-        return [], ["EVOLUTION.md is missing"]
+        return [], ["WORKFLOW-FIXES.md is missing"]
     entries, problems, cur = [], [], None
     for n, line in enumerate(read(p).splitlines(), 1):
         if line.startswith("## "):
@@ -369,33 +369,33 @@ def parse_evolution(root):
             if m:
                 cur = {"id": m.group(1), "status": m.group(2), "line": n, "fields": {}}
                 entries.append(cur)
-            elif line.startswith("## E-"):
-                problems.append("EVOLUTION.md line {}: a change heading must look like "
-                                "'## E-1 | trial'".format(n))
+            elif line.startswith("## F-"):
+                problems.append("WORKFLOW-FIXES.md line {}: a fix heading must look like "
+                                "'## F-1 | testing'".format(n))
         elif cur is not None:
             m = FIELD_RE.match(line)
             if m:
                 cur["fields"][m.group(1)] = m.group(2).strip()
     for e in entries:
         f = e["fields"]
-        applied = f.get("Applied by", "")
+        applied = f.get("Made by", "")
         before = re.match(r"^(\d+(?:\.\d+)?)", f.get("Before", ""))
         e.update({"step": _num(r"S-(\d+)", f.get("Step")),
-                  "check_at": _num(r"S-(\d+)", f.get("Check at")),
-                  "size": f.get("Size", ""), "by": applied.split()[0] if applied else "",
+                  "check_at": _num(r"S-(\d+)", f.get("Re-check at")),
+                  "size": f.get("Size", ""), "by": applied.split()[0].lower() if applied else "",
                   "level": _num(r"level (\d)", applied), "measure": f.get("Measure", ""),
                   "before": float(before.group(1)) if before else None,
                   "change": f.get("Change", "")})
     return entries, problems
 
 
-def evolution_problems(entries, state):
+def fix_problems(entries, state):
     out = []
     cur = state.get("step") if isinstance(state.get("step"), int) else 0
-    if [e["id"] for e in entries] != ["E-{}".format(i) for i in range(1, len(entries) + 1)]:
-        out.append("EVOLUTION.md: change ids must run E-1, E-2, ... in order")
+    if [e["id"] for e in entries] != ["F-{}".format(i) for i in range(1, len(entries) + 1)]:
+        out.append("WORKFLOW-FIXES.md: fix ids must run F-1, F-2, ... in order")
     for e in entries:
-        w = "EVOLUTION.md " + e["id"]
+        w = "WORKFLOW-FIXES.md " + e["id"]
         f = e["fields"]
         if e["status"] not in STATUSES:
             out.append(w + ": status must be one of " + ", ".join(sorted(STATUSES)))
@@ -410,24 +410,24 @@ def evolution_problems(entries, state):
         if e["size"] not in SIZES:
             out.append(w + ": 'Size' must be one of " + ", ".join(sorted(SIZES)))
         if e["by"] not in APPLIERS:
-            out.append(w + ": 'Applied by' must start with auto, you or proposed")
+            out.append(w + ": 'Made by' must start with AI, you or proposed")
         if not MEASURE_RE.match(e["measure"]):
             out.append(w + ": 'Measure' must be one of the measures in tools/wf.py")
         waiting = e["status"] in ("proposed", "rejected")
         if waiting != (e["by"] == "proposed"):
-            out.append(w + ": 'Applied by: proposed' goes with status proposed or rejected, "
+            out.append(w + ": 'Made by: proposed' goes with status proposed or rejected, "
                            "and only with those")
         if not waiting and (e["check_at"] is None or e["before"] is None):
-            out.append(w + ": a change in use needs 'Before' (a number) and 'Check at' (a step)")
-        if e["by"] == "auto":
+            out.append(w + ": a fix in use needs 'Before' (a number) and 'Re-check at' (a step)")
+        if e["by"] == "ai":
             if e["level"] is None:
-                out.append(w + ": 'Applied by: auto' must say the level, like 'auto (level 2)'")
-            elif e["size"] == "protected":
-                out.append(w + ": a protected change is never applied automatically")
+                out.append(w + ": 'Made by: AI' must say the fix level, like 'AI (level 2)'")
+            elif e["size"] == "yours":
+                out.append(w + ": a fix that is the user's to decide is never made by the AI")
             elif e["level"] == 1:
-                out.append(w + ": at evolution level 1 every change is proposed")
-            elif e["size"] == "large" and e["level"] < 3:
-                out.append(w + ": at evolution level 2 a large change is proposed, not applied")
+                out.append(w + ": at fix level 1 every fix is proposed")
+            elif e["size"] == "big" and e["level"] < 3:
+                out.append(w + ": at fix level 2 a big fix is proposed, not made by the AI")
         closed = e["status"] in ("kept", "undone", "rejected")
         if closed == (f["Outcome"] in ("", "-")):
             out.append(w + ": 'Outcome' is filled in when, and only when, the change is kept, "
@@ -494,7 +494,7 @@ def check(root):
         elif key in CHOICES and state[key] not in CHOICES[key]:
             problems.append("STATE.json: '{}' must be one of {}".format(
                 key, ", ".join(sorted(map(str, CHOICES[key])))))
-        elif key in ("lookback_every", "check_after") and state[key] < 1:
+        elif key in ("review_every", "recheck_after") and state[key] < 1:
             problems.append("STATE.json: '{}' must be 1 or more".format(key))
     if "thresholds" in state:
         th = state["thresholds"]
@@ -547,8 +547,8 @@ def check(root):
             problems.append("RULES.md: {} has no 'Origin:' line".format(r["id"]))
     entries, log_problems = parse_log(root)
     problems += log_problems
-    evo, evo_problems = parse_evolution(root)
-    # log lines may name a rule that a later change removed, if EVOLUTION.md records it
+    evo, evo_problems = parse_fixes(root)
+    # log lines may name a rule that a later fix removed, if WORKFLOW-FIXES.md records it
     known_rules = set(ids) | {r for e in evo for k in ("Change", "Undo")
                               for r in re.findall(r"\bR-\d+\b", e["fields"].get(k, ""))}
     last_time, last_step = "", 0
@@ -572,7 +572,7 @@ def check(root):
             problems.append(where + ": part '{}' is not in STATE.json".format(e["part"]))
     if not state.get("practice") and (root / PRACTICE_FILE).exists():
         problems.append(PRACTICE_FILE + " left over from the practice round")
-    problems += evo_problems + evolution_problems(evo, state)
+    problems += evo_problems + fix_problems(evo, state)
     problems += guard_problems(root, state, entries)
     return problems
 
@@ -583,7 +583,7 @@ def analyse(root):
     """Everything the health metrics need, read once."""
     state = load_state(root)
     entries, _ = parse_log(root)
-    evo, _ = parse_evolution(root)
+    evo, _ = parse_fixes(root)
     th = dict(THRESHOLDS)
     if isinstance(state.get("thresholds"), dict):
         th.update({k: v for k, v in state["thresholds"].items()
@@ -768,11 +768,11 @@ def warnings(ctx):
     return out
 
 
-def checkbacks(ctx):
-    """Changes on trial whose check-back step has come, with the before/after numbers."""
+def rechecks(ctx):
+    """Fixes being tested whose re-check step has come, with the before/after numbers."""
     out = []
     for e in ctx["evo"]:
-        if e["status"] != "trial" or e["check_at"] is None or ctx["cur"] < e["check_at"]:
+        if e["status"] != "testing" or e["check_at"] is None or ctx["cur"] < e["check_at"]:
             continue
         m = e["measure"]
         after = metric_value(ctx, m, [ctx["steps"][n] for n in ctx["nums"]
@@ -780,11 +780,11 @@ def checkbacks(ctx):
         before = e["before"]
         if after is None or before is None or (m not in HIGHER_IS_BETTER and
                                                before == 0 and after == 0):
-            verdict, todo = "unclear", "nothing to compare: keep it; the next look-back reviews it"
+            verdict, todo = "unclear", "nothing to compare: keep it; the next progress review looks at it"
         elif (after > before) if m in HIGHER_IS_BETTER else (after < before):
             verdict, todo = "helped", "keep it"
-        elif e["by"] == "auto":
-            verdict, todo = "not helped", "undo it (it was applied automatically) and report"
+        elif e["by"] == "ai":
+            verdict, todo = "not helped", "undo it (the AI made it) and report"
         else:
             verdict, todo = "not helped", "propose to the user to undo it"
         fmt = "{:.0f}" if m == "questions" else "{:.2f}"
@@ -796,15 +796,15 @@ def checkbacks(ctx):
     return out
 
 
-def lookback_due(ctx):
-    """Return (due, reason, steps since the last look-back, interval)."""
+def review_due(ctx):
+    """Return (due, reason, steps since the last progress review, interval)."""
     state = ctx["state"]
-    last = max([n for n, s in ctx["steps"].items() if has(s, "lookback")] or [0])
-    every = state.get("lookback_every", 10)
+    last = max([n for n, s in ctx["steps"].items() if has(s, "review")] or [0])
+    every = state.get("review_every", 10)
     every = every if isinstance(every, int) and every > 0 else 10
     since = ctx["cur"] - last
-    if state.get("lookback_phase") and state.get("phase") != state.get("lookback_phase"):
-        return True, "phase '{}' ended".format(state.get("lookback_phase")), since, every
+    if state.get("review_phase") and state.get("phase") != state.get("review_phase"):
+        return True, "phase '{}' ended".format(state.get("review_phase")), since, every
     if since >= every:
         return True, "{} steps since the last one".format(since), since, every
     return False, "", since, every
@@ -812,11 +812,11 @@ def lookback_due(ctx):
 
 def due_items(ctx):
     items = []
-    due, reason, _, _ = lookback_due(ctx)
+    due, reason, _, _ = review_due(ctx)
     if due:
-        items.append("look-back ({}): tools/lookback.md".format(reason))
-    for c in checkbacks(ctx):
-        items.append("check-back of " + c["id"])
+        items.append("progress review ({}): tools/progress-review.md".format(reason))
+    for c in rechecks(ctx):
+        items.append("re-check of " + c["id"])
     for e in ctx["evo"]:
         if e["status"] == "proposed":
             items.append("{} waits for the user's answer".format(e["id"]))
@@ -907,12 +907,12 @@ def cmd_check(root, argv):
 def cmd_health(root, argv):
     problems = check(root)
     ctx = analyse(root)
-    ws, cbs = warnings(ctx), checkbacks(ctx)
-    due, reason, since, every = lookback_due(ctx)
+    ws, cbs = warnings(ctx), rechecks(ctx)
+    due, reason, since, every = review_due(ctx)
     waiting = [e for e in ctx["evo"] if e["status"] == "proposed"]
     if "--json" in argv:
         print(json.dumps({"problems": problems, "step": ctx["cur"], "warnings": ws,
-                          "checkbacks": cbs, "lookback_due": due,
+                          "rechecks": cbs, "review_due": due,
                           "waiting": [e["id"] for e in waiting]}, indent=2))
         return 1 if problems else 0
     lines = []
@@ -923,114 +923,114 @@ def cmd_health(root, argv):
     progress = ("progress: {} of the last {} steps".format(
         sum(flag("progress", s, ctx) for s in window), len(window)) if window
         else "no steps yet")
-    lines.append("Health: {} | {} | look-back {}".format(
+    lines.append("Health: {} | {} | progress review {}".format(
         "OK" if not ws else "{} warning(s)".format(len(ws)), progress,
         "due" if due else "in {} steps".format(every - since)))
     for w in ws:
         lines.append("- warning [{}] {} -> likely fix: {}".format(w["id"], w["text"], w["fix"]))
     for c in cbs:
-        lines.append("- check-back " + c["text"])
+        lines.append("- re-check " + c["text"])
     if due:
-        lines.append("- look-back due ({}): it is the next step's action -> "
-                     "tools/lookback.md".format(reason))
+        lines.append("- progress review due ({}): it is the next step's action -> "
+                     "tools/progress-review.md".format(reason))
     for e in waiting:
         lines.append("- waiting for the user: {} ({}): {}".format(e["id"], e["size"],
                                                                   e["change"]))
     if ws or cbs:
-        lines.append("What to do: tools/evolve.md")
+        lines.append("What to do: tools/fixes.md")
     print("\n".join(lines))
     return 1 if problems else 0
 
 
-CHANGE_USAGE = ('usage: wf.py change add "what changed" --size small|large|protected '
-                '--by auto|you|proposed --measure M --evidence "..." --undo "..." '
-                '[--expect "..."]\n       wf.py change mark E-N STATUS "note"')
+FIX_USAGE = ('usage: wf.py fix add "what changes" --size small|big|yours '
+             '--by ai|you|proposed --measure M --evidence "..." --undo "..." '
+             '[--expect "..."]\n       wf.py fix mark F-N STATUS "note"')
 
 
 def append_block(path, block):
     text = read_raw(path) if path.exists() else ""
     nl = "\r\n" if "\r\n" in text else "\n"
-    lines = [l for l in text.splitlines() if l.strip() != "No changes yet."]
+    lines = [l for l in text.splitlines() if l.strip() != "No fixes yet."]
     while lines and not lines[-1].strip():
         lines.pop()
     write(path, nl.join(lines + [""] + block) + nl)
 
 
-def cmd_change_add(root, argv):
+def cmd_fix_add(root, argv):
     opts, rest = take_opts(argv, ("--size", "--by", "--measure", "--evidence", "--undo",
                                   "--expect"))
     what = one_line(" ".join(rest))
     missing = [o for o in ("--size", "--by", "--measure", "--evidence", "--undo")
                if not opts.get(o, "").strip()]
     if not what or missing:
-        raise WfError(CHANGE_USAGE + ("\nmissing: " + ", ".join(missing) if missing else ""))
+        raise WfError(FIX_USAGE + ("\nmissing: " + ", ".join(missing) if missing else ""))
     size, by, measure = opts["--size"], opts["--by"], opts["--measure"]
     if size not in SIZES:
-        raise WfError("--size must be small, large or protected")
+        raise WfError("--size must be small, big or yours")
     if by not in APPLIERS:
-        raise WfError("--by must be auto, you or proposed")
+        raise WfError("--by must be ai, you or proposed")
     if not MEASURE_RE.match(measure):
         raise WfError("--measure must be one of: progress, rework, workflow, overrun, escaped, "
                       "questions, correction:<key>, repeat:<key>")
     ctx = analyse(root)
-    state, level = ctx["state"], ctx["state"].get("evolution_level")
-    if by == "auto":
-        if size == "protected":
-            raise WfError("a protected change is never applied automatically: ask the user "
+    state, level = ctx["state"], ctx["state"].get("fix_level")
+    if by == "ai":
+        if size == "yours":
+            raise WfError("this fix is the user's to decide, never the AI's: ask the user "
                           "(--by proposed)")
         if level == 1:
-            raise WfError("evolution level 1: every change is proposed (--by proposed)")
-        if size == "large" and level != 3:
-            raise WfError("evolution level {}: a large change is proposed, not applied "
+            raise WfError("fix level 1: every fix is proposed (--by proposed)")
+        if size == "big" and level != 3:
+            raise WfError("fix level {}: a big fix is proposed, not made by the AI "
                           "(--by proposed)".format(level))
     nid = len(ctx["evo"]) + 1
     for k in ("--evidence", "--undo", "--expect"):
         if opts.get(k):
-            opts[k] = opts[k].replace("E-<n>", "E-{}".format(nid))
-    what = what.replace("E-<n>", "E-{}".format(nid))
+            opts[k] = opts[k].replace("F-<n>", "F-{}".format(nid))
+    what = what.replace("F-<n>", "F-{}".format(nid))
     proposed = by == "proposed"
-    applied = {"auto": "auto (level {})".format(level), "you": "you",
+    applied = {"ai": "AI (level {})".format(level), "you": "you",
                "proposed": "proposed (waiting for the user)"}[by]
-    block = ["## E-{} | {}".format(nid, "proposed" if proposed else "trial"),
+    block = ["## F-{} | {}".format(nid, "proposed" if proposed else "testing"),
              "- Step: {} ({})".format(step_name(ctx["cur"]), now()),
              "- Evidence: " + one_line(opts["--evidence"]),
              "- Change: " + what,
              "- Size: " + size,
-             "- Applied by: " + applied,
+             "- Made by: " + applied,
              "- Expect: " + one_line(opts.get("--expect") or "-"),
              "- Measure: " + measure,
              "- Before: " + ("-" if proposed else before_text(ctx, measure)),
-             "- Check at: " + ("-" if proposed else step_name(
-                 ctx["cur"] + int(state.get("check_after", 5)))),
+             "- Re-check at: " + ("-" if proposed else step_name(
+                 ctx["cur"] + int(state.get("recheck_after", 5)))),
              "- Undo: " + one_line(opts["--undo"]),
              "- Outcome: -"]
-    append_block(root / "EVOLUTION.md", block)
-    add_log(root, state, "AI", "{} workflow change E-{} ({}): {}".format(
-        "proposed" if proposed else "applied", nid, size, what), tags=["workflow"])
+    append_block(root / "WORKFLOW-FIXES.md", block)
+    add_log(root, state, "AI", "{} workflow fix F-{} ({}): {}".format(
+        "proposed" if proposed else "made", nid, size, what), tags=["workflow"])
     print("\n".join(block))
 
 
-def cmd_change_mark(root, argv):
+def cmd_fix_mark(root, argv):
     if len(argv) < 3:
-        raise WfError(CHANGE_USAGE)
+        raise WfError(FIX_USAGE)
     eid, new, note = argv[0], argv[1], one_line(" ".join(argv[2:]))
     ctx = analyse(root)
     entry = next((e for e in ctx["evo"] if e["id"] == eid), None)
     if not entry:
-        raise WfError("no change {} in EVOLUTION.md".format(eid))
+        raise WfError("no fix {} in WORKFLOW-FIXES.md".format(eid))
     allowed = TRANSITIONS.get(entry["status"], set())
     if new not in allowed:
         raise WfError("{} is {}; it can move to: {}".format(
             eid, entry["status"], ", ".join(sorted(allowed)) or "nothing (it is closed)"))
     if not note:
         raise WfError("add a short note: why (for rejected: the user's words)")
-    if new == "trial":
-        updates = {"Applied by": "you (approved)", "Before": before_text(ctx, entry["measure"]),
-                   "Check at": step_name(ctx["cur"] + int(ctx["state"].get("check_after", 5)))}
+    if new == "testing":
+        updates = {"Made by": "you (approved)", "Before": before_text(ctx, entry["measure"]),
+                   "Re-check at": step_name(ctx["cur"] + int(ctx["state"].get("recheck_after", 5)))}
     else:
         updates = {"Outcome": "{} at {} ({}): {}".format(new, step_name(ctx["cur"]),
                                                          now()[:10], note)}
-    p = root / "EVOLUTION.md"
+    p = root / "WORKFLOW-FIXES.md"
     text = read_raw(p)
     nl = "\r\n" if "\r\n" in text else "\n"
     lines = text.splitlines()
@@ -1050,17 +1050,17 @@ def cmd_change_mark(root, argv):
         last_field += 1
         lines.insert(last_field, "- {}: {}".format(k, v))
     write(p, nl.join(lines) + nl)
-    add_log(root, ctx["state"], "AI", "workflow change {} is now {}: {}".format(eid, new, note),
+    add_log(root, ctx["state"], "AI", "workflow fix {} is now {}: {}".format(eid, new, note),
             tags=["workflow"])
     print("{} is now {}".format(eid, new))
 
 
-def cmd_change(root, argv):
+def cmd_fix(root, argv):
     if argv and argv[0] == "add":
-        return cmd_change_add(root, argv[1:])
+        return cmd_fix_add(root, argv[1:])
     if argv and argv[0] == "mark":
-        return cmd_change_mark(root, argv[1:])
-    raise WfError(CHANGE_USAGE)
+        return cmd_fix_mark(root, argv[1:])
+    raise WfError(FIX_USAGE)
 
 
 def cmd_practice_done(root, argv):
@@ -1089,7 +1089,7 @@ def cmd_practice_done(root, argv):
 
 
 COMMANDS = {"status": lambda r, a: print("\n".join(status_lines(r))), "begin": cmd_begin,
-            "log": cmd_log, "check": cmd_check, "health": cmd_health, "change": cmd_change,
+            "log": cmd_log, "check": cmd_check, "health": cmd_health, "fix": cmd_fix,
             "practice-done": cmd_practice_done}
 
 

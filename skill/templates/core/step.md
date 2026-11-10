@@ -4,36 +4,36 @@ A step does exactly one action from `NEXT.md` and leaves the files ready for the
 Below, `wf` means `{{python}} tools/wf.py`.
 
 1. **Begin.** Run `wf begin`. It numbers the step, logs it and prints a short status.
-   Read `NEXT.md`. If the status says a look-back is due, the look-back is this step's action:
-   follow `tools/lookback.md`, then go on at step 6. NEXT.md keeps its action for the next step.
+   Read `NEXT.md`. If the status says a progress review is due, the review is this step's action:
+   follow `tools/progress-review.md`, then go on at step 6. NEXT.md keeps its action for the next step.
 2. **Questions first.** If the actor in NEXT.md is YOU, ask the user whether it is done; if not,
    remind them what to do and stop. If anything blocks the action, ask now. Look in
    QUESTIONS.md "Just in time" for a trigger this action would hit, and ask that question first.
-   If the status lists workflow changes waiting for the user, ask about them too
-   (`tools/evolve.md`). Record answers: decisions word for word in DECISIONS.md, questions
+   If the status lists workflow fixes waiting for the user, ask about them too
+   (`tools/fixes.md`). Record answers: decisions word for word in DECISIONS.md, questions
    moved to "Answered" in QUESTIONS.md. Log `[asked]` when you ask and `[answered]` when they
    answer.
 3. **Limits.** Check the action against the limits and "Your notes" in BRIEF.md, RULES.md and
-   the protected list in AGENTS.md. If it would cross one, ask first.
+   the "Always ask first" list in AGENTS.md. If it would cross one, ask first.
 4. **Do the action.** One action only, in the end-product part NEXT.md names.
 5. **Record.**
    - Update the end product.
    - Log each event: `wf log AI "what happened" --part <part> --tags "<tags>"` (tags below).
      Log the user's actions and words as actor `YOU`.
-   - Update STATE.json only if the phase changed (the next step is then a look-back).
+   - Update STATE.json only if the phase changed (the next step is then a progress review).
    - Rewrite NEXT.md: exactly one next action, its actor (AI or YOU), its part, "Done when".
      If the next action waits for the user's answer, it is theirs: `Actor: YOU`,
      `Action: answer: <the question>`. Never leave the action that was just done.
    - Git: {{git policy, e.g. "commit with a message saying what moved; never push" or "do not commit; the user commits" or "no git"}}.
 6. **Health.** Run `wf health`. It checks the files, then reads the log for signs of trouble.
    Fix any file problem and log the fix with `[workflow]`. If it shows a warning or a
-   check-back, follow `tools/evolve.md` now.
+   re-check, follow `tools/fixes.md` now.
 7. **Report**, short and plain:
    - Moved: which part changed and how, or "nothing moved in the end product".
    - Next: the action in NEXT.md and who does it.
-   - Questions for you: only if there are any, including workflow changes proposed to you.
-   - Workflow: the health line, and any change the workflow made to itself, with "to undo,
-     say 'undo E-<n>'".
+   - Questions for you: only if there are any, including workflow fixes proposed to you.
+   - Workflow: the health line, and any fix the workflow made to itself, with "to undo,
+     say 'undo fix <n>'".
 8. **Continue or stop.** {{Autonomy, one of: "Stop after the report." or "Begin the next step, unless the next actor is YOU, a question is waiting, a limit is near or the check failed."}}
 
 ## Tags
@@ -54,7 +54,7 @@ these tags to check its own health, so be accurate rather than generous.
 | `[used:<module>]` | a module listed in STATE.json "modules" was used |
 | `[overrun]` | the step took much longer than expected |
 | `[rule:<id>]` | a rule in RULES.md changed what you did |
-| `[lookback]` | a look-back was done (see `tools/lookback.md`) |
+| `[review]` | a progress review was done (see `tools/progress-review.md`) |
 | `[noted:<warning>]` | a health warning needed no change; say why in the same line |
 
 Keys are lowercase words with hyphens (`missing-source`). Before inventing a key, search LOG.md
@@ -74,8 +74,8 @@ something about the workflow is annoying, log their words with `[workflow]` and 
   non-empty `Action:`; STATE.json is valid JSON; AGENTS.md has at most 80 lines; RULES.md has
   at most 12 rules in use. Every 10 steps, read the last 10 steps in LOG.md: the same
   `[correction]` key twice, fewer than half the steps with `[progress]`, or 3 steps with
-  `[redo]` or `[fail]` are warnings (`tools/evolve.md`). A look-back is due every
-  "lookback_every" steps and when the phase changes.
-- `wf change add` / `wf change mark`: write or update the EVOLUTION.md entry by hand, in the
-  format shown at the top of EVOLUTION.md.
+  `[redo]` or `[fail]` are warnings (`tools/fixes.md`). A progress review is due every
+  "review_every" steps and when the phase changes.
+- `wf fix add` / `wf fix mark`: write or update the WORKFLOW-FIXES.md entry by hand, in the
+  format shown at the top of WORKFLOW-FIXES.md.
 <!-- /no-python -->

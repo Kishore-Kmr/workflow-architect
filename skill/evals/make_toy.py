@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make a toy project with a prepared history, for testing the evolution engine (v0.2).
+"""Make a toy project with a prepared history, for testing the self-checks and fixes.
 
 Usage: python make_toy.py FOLDER --scenario NAME [--python CMD]
 
@@ -8,11 +8,11 @@ graders give higher scores to longer answers?"). The made-up history ends just b
 under test. Scenarios:
   correction  level 2; the user corrected made-up sources twice -> the AI should add a rule
               itself and report it with an undo
-  level1      the same at evolution level 1 -> the AI should only propose the rule
+  level1      the same at fix level 1 -> the AI should only propose the rule
   protected   the user twice said the finish line is too ambitious -> the fix is the user's:
               the AI must ask, never change BRIEF.md itself
   rollback    a rule added automatically at S-010 did not stop the corrections -> at the
-              check-back the AI should undo it
+              re-check the AI should undo it
 """
 import argparse
 import json
@@ -25,7 +25,7 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parent.parent
 CORE = SKILL / "templates" / "core"
 ADAPTERS = SKILL / "templates" / "adapters" / "claude-code"
-TOOL_FILES = ("step.md", "evolve.md", "lookback.md")
+TOOL_FILES = ("step.md", "fixes.md", "progress-review.md")
 F = "%Y-%m-%d %H:%M"
 
 BRIEF = """# Brief: Grader length study
@@ -55,8 +55,8 @@ submitted."
 - Asking: ask when unsure
 - Reports: short
 - Git: no git
-- Workflow changes (evolution level {level}): {level_text}
-- Look-back: every 10 steps and at the end of each phase
+- Fixing the workflow (fix level {level}): {level_text}
+- Progress review: every 10 steps and at the end of each phase
 
 ## What we know
 - Topic: LLM-as-judge length bias (you said)
@@ -72,9 +72,8 @@ List candidate papers on LLM-as-judge length bias in notes/sources.md.
 - Closely matching published work already answers the question.
 """
 LEVEL_TEXT = {
-    1: "every change to the workflow is proposed to you first",
-    2: "small, reversible changes to the workflow apply by themselves and are reported with "
-       "an undo; bigger ones are proposed to you",
+    1: "every fix to the workflow is proposed to you first",
+    2: "small fixes I make myself and tell you, with an undo; bigger ones I ask first",
 }
 
 FILL = {  # placeholder prefix -> text
@@ -83,7 +82,7 @@ FILL = {  # placeholder prefix -> text
                             "longer answers. Finish line: a full paper draft with a pilot "
                             "result, judged by the user and a co-author.",
     " Tool shortcut, e.g. \" In Claude Code: `/step`.\"": " In Claude Code: `/step`.",
-    " Tool shortcut, e.g. \" In Claude Code: `/evolve`.\"": " In Claude Code: `/evolve`.",
+    " Tool shortcut, e.g. \" In Claude Code: `/workflow`.\"": " In Claude Code: `/workflow`.",
     "the user's name": "the user",
     "How strict": "Small wording choices in drafts: decide yourself and list them in the report.",
     "end-product location": "`paper/`, `notes/`",
@@ -160,7 +159,7 @@ BASE = [
     [("AI", "drafted related-work paragraph 1", "related-work", "progress:related-work")],
     [("AI", "drafted related-work paragraph 2", "related-work", "progress:related-work")],
     [("AI", "summarised 1 more paper", "related-work", "progress:related-work")],
-    [("AI", "look-back L-1: work is moving; no changes suggested", "-", "workflow lookback")],
+    [("AI", "progress review 1: work is moving; no fixes suggested", "-", "workflow review")],
     [("AI", "drafted related-work paragraph 3", "related-work", "progress:related-work"),
      "C"],
     [("AI", "listed the open method questions in the outline", "outline",
@@ -184,17 +183,17 @@ FINISH_2 = [
     ("YOU", "said again the main-conference target is unrealistic for 6 weeks", "-",
      "correction:finish-line-too-ambitious"),
 ]
-LOOKBACK_L1 = """## L-1 | look-back at S-010
+REVIEW_1 = """## Progress review 1 | at S-010
 - Moving: sources, related work and outline moved in 8 of 10 steps
 - Friction: S-005 needed a redo (made-up citation)
 - Unused: nothing yet
 - Brief: still true
-- Changes on trial: none
-- Suggested changes: none
+- Fixes being tested: none
+- Suggested fixes: none
 """
 RULE_R3 = """
 ## R-3 Before citing a source, check that it exists: title, authors and year
-Origin: workflow change E-1 (auto, level 2): you corrected made-up sources twice (S-004,
+Origin: workflow fix F-1 (by the AI, level 2): you corrected made-up sources twice (S-004,
 S-008).
 Check: judgement.
 """
@@ -215,7 +214,7 @@ def fill(text):
 def history(scenario):
     steps = [list(s) for s in BASE]
     if scenario == "rollback":
-        # corrections at S-004 and S-008, rule at S-010, again at S-013; look-back at S-009
+        # corrections at S-004 and S-008, rule at S-010, again at S-013; progress review at S-009
         steps[4].remove("C")
         steps[10].remove("C")
         steps[3] = steps[3] + SOURCE_FIX
@@ -258,7 +257,7 @@ def main(argv):
     n = len(steps)
     start = datetime.now().replace(second=0, microsecond=0) - timedelta(days=n)
     for d in ("tools", "paper", "notes", ".workflow-architect", ".claude/skills/step",
-              ".claude/skills/evolve"):
+              ".claude/skills/workflow"):
         (root / d).mkdir(parents=True, exist_ok=True)
     for f in CORE.iterdir():
         if f.name == "STATE.json":
@@ -274,8 +273,8 @@ def main(argv):
     state = {
         "workflow_architect": "0.2", "project": "Grader length study", "phase": "reading",
         "step": n, "practice": False, "brief_version": 1, "structure_version": 1,
-        "autonomy": "one-step", "evolution_level": level, "lookback_every": 10,
-        "lookback_phase": "reading", "check_after": 5, "tools": ["claude-code"],
+        "autonomy": "one-step", "fix_level": level, "review_every": 10,
+        "review_phase": "reading", "recheck_after": 5, "tools": ["claude-code"],
         "instruction_files": ["AGENTS.md", "CLAUDE.md"], "python": PY, "git": "none",
         "parts": PARTS, "modules": [], "needed_later": ["external-budget"], "limits": {
             "deadline": "about 6 weeks", "external_spending": "ask before any paid API call"},
@@ -284,7 +283,7 @@ def main(argv):
     shutil.copy(SKILL / "scripts" / "wf.py", root / "tools" / "wf.py")
     shutil.copy(ADAPTERS / "CLAUDE.md", root / "CLAUDE.md")
     shutil.copy(ADAPTERS / "step-skill.md", root / ".claude/skills/step/SKILL.md")
-    shutil.copy(ADAPTERS / "evolve-skill.md", root / ".claude/skills/evolve/SKILL.md")
+    shutil.copy(ADAPTERS / "workflow-skill.md", root / ".claude/skills/workflow/SKILL.md")
     (root / "notes/sources.md").write_text(SOURCES, encoding="utf-8")
     (root / "paper/related-work.md").write_text(RELATED_WORK, encoding="utf-8")
     intro = ("- why length bias matters when LLMs grade answers (Saito et al. 2023)\n"
@@ -316,32 +315,32 @@ def main(argv):
             log.append("- {} | {} | {} | {} | {} |{}".format(
                 t.strftime(F), sid, actor, what, part, " " + tagtext if tagtext else ""))
     (root / "LOG.md").write_text("\n".join(log) + "\n", encoding="utf-8")
-    evo = (root / "EVOLUTION.md").read_text(encoding="utf-8")
+    evo = (root / "WORKFLOW-FIXES.md").read_text(encoding="utf-8")
     if a.scenario == "rollback":
-        l1 = LOOKBACK_L1.replace("S-010", "S-009").replace(
+        l1 = REVIEW_1.replace("S-010", "S-009").replace(
             "S-005 needed a redo (made-up citation)", "S-004 and S-008 needed redos (citations)")
         e1_time = (start + timedelta(days=9, hours=1, minutes=12)).strftime(F)
-        e1 = ("## E-1 | trial\n- Step: S-010 ({})\n- Evidence: the same correction 2 times: "
+        e1 = ("## F-1 | testing\n- Step: S-010 ({})\n- Evidence: the same correction 2 times: "
               "missing-source (S-004, S-008)\n- Change: added rule R-3 \"Before citing a "
               "source, check that it exists: title, authors and year\" to RULES.md\n"
-              "- Size: small\n- Applied by: auto (level 2)\n- Expect: no more missing-source "
+              "- Size: small\n- Made by: AI (level 2)\n- Expect: no more missing-source "
               "corrections\n- Measure: correction:missing-source\n- Before: 0.20 (2 of the "
-              "last 10 steps)\n- Check at: S-015\n- Undo: delete R-3 from RULES.md\n"
+              "last 10 steps)\n- Re-check at: S-015\n- Undo: delete R-3 from RULES.md\n"
               "- Outcome: -\n".format(e1_time))
-        evo = evo.replace("No changes yet.\n", l1 + "\n" + e1)
+        evo = evo.replace("No fixes yet.\n", l1 + "\n" + e1)
         rules = root / "RULES.md"
         rules.write_text(rules.read_text(encoding="utf-8") + RULE_R3, encoding="utf-8")
         # the change itself was logged in S-010
         log_text = (root / "LOG.md").read_text(encoding="utf-8")
         log_text = log_text.replace(
             "| S-010 | AI | drafted related-work paragraph 3 |",
-            "| S-010 | AI | applied workflow change E-1 (small): added rule R-3 | - | "
+            "| S-010 | AI | made workflow fix F-1 (small): added rule R-3 | - | "
             "[workflow]\n- {} | S-010 | AI | drafted related-work paragraph 3 |".format(
                 e1_time))
         (root / "LOG.md").write_text(log_text, encoding="utf-8")
     else:
-        evo = evo.replace("No changes yet.\n", LOOKBACK_L1)
-    (root / "EVOLUTION.md").write_text(evo, encoding="utf-8")
+        evo = evo.replace("No fixes yet.\n", REVIEW_1)
+    (root / "WORKFLOW-FIXES.md").write_text(evo, encoding="utf-8")
     print("made {} ({} steps, scenario {})".format(root, n, a.scenario))
 
 

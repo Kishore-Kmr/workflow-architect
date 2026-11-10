@@ -32,10 +32,10 @@ yet)". Yours to add to at any time; the workflow reads it before each step.>
 - Asking: <how strict "ask first" is>
 - Reports: <short | detailed>
 - Git: <commit after each step | you commit | no git>
-- Workflow changes (evolution level 2): small, reversible changes to the workflow apply by
-  themselves and are reported with an undo; bigger ones are proposed to you. **OK?**
-- Look-back: every 10 steps and at the end of each phase, a fresh helper checks whether the
-  workflow is moving the work forward. **OK?**
+- Fixing the workflow: small fixes I make myself and tell you, with an undo; bigger ones I
+  ask first. **OK?**
+- Progress review: every 10 steps and at the end of each phase, a fresh AI checks whether the
+  work is moving and what slows it down; at each phase end you decide whether to go on. **OK?**
 
 ## What we know
 - <topic>: <fact> (<you said | checked | inferred: right?>)
@@ -71,12 +71,12 @@ Structure proposal (version 1)
   DECISIONS.md     your decisions, word for word
   QUESTIONS.md     open questions; questions saved for later
   RULES.md         <n> rules: <short list>
-  EVOLUTION.md     changes to the workflow, with undo (empty for now)
+  WORKFLOW-FIXES.md  fixes to the workflow, with undo (empty for now)
   tools/step.md    how to do one step
-  tools/evolve.md  how the workflow checks and changes itself
-  tools/lookback.md  the regular look-back
+  tools/fixes.md   how the workflow checks and fixes itself
+  tools/progress-review.md  the regular progress review
   tools/wf.py      status, log, checks, health               <- because: Python is available
-  .claude/skills/  the /step and /evolve commands            <- because: you use Claude Code
+  .claude/skills/  the /step and /workflow commands            <- because: you use Claude Code
   <end-product parts, e.g. deliverable/outline.md>           <- because: <answer>
 
 Existing files: <kept as they are; which ones the parts point to>
@@ -98,7 +98,7 @@ They come in a later version. If the brief shows a need:
 - **It belongs to a later stage** (e.g. budget before the first paid call, experiment cards
   before the first experiment): propose only the just-in-time question. The rule is added when
   that stage comes.
-- Never propose a rule that repeats the core rules, the protected list in AGENTS.md (spending,
+- Never propose a rule that repeats the core rules, the "Always ask first" list in AGENTS.md (spending,
   outward actions, irreversible steps) or a setting (autonomy, reports, git). A new project
   usually needs 2 to 5 rules in all.
 

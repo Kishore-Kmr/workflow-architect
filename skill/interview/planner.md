@@ -40,7 +40,7 @@ fact to confirm instead of asking it again.
    - An unknown tied to a later stage (experiments, spending, data collection, labelling,
      other people's input, submission, release) is **not asked now**: save it for later, with
      that stage as the trigger ("when the first experiment is planned").
-   - Safety does not need early questions: the protected list already makes every spend,
+   - Safety does not need early questions: the "Always ask first" list already makes every spend,
      outward action and irreversible step wait for the user.
    - If a sensible default exists, put it in the brief marked **OK?** instead of asking.
 4. **Rank** what is left by impact and by dependency (prerequisites first).
