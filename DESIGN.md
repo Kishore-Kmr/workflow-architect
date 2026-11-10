@@ -306,7 +306,6 @@ skill/
 │   ├── planner.md          how the next questions are chosen
 │   ├── coverage-map.md     topics: why, relevant when, design decisions fed, when needed
 │   └── brief-template.md
-├── domains/                optional packs: extra topics and end-product skeletons
 ├── modules/                one file per module: purpose, trigger, files, how to remove
 ├── templates/              files written into projects: core files; tools/step.md,
 │                           tools/evolve.md (change sizes, levels, undo, re-interview) and
@@ -341,7 +340,8 @@ skill/
 2. **v0.2:** evolution engine: `wf.py health`, warnings, `/evolve`, change levels, trial and
    rollback, look-back, re-interview. Built 2026-11-07; the metrics that need modules wait
    for v0.3.
-3. **v0.3:** modules (section 5) and the first domain packs.
+3. **v0.3:** modules (section 5), called add-ons in what the user sees. Domain packs are set
+   aside (section 12, 2026-11-10).
 4. **v0.4:** full tests (section 9), lesson import, learning across projects, docs.
 
 ## 11. Not in scope for now
@@ -386,8 +386,18 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   it, and git history helps where git is used. (2) No upgrade path for projects set up with
   v0.1; they are set up fresh. Your v0.2 hands-on test uses a toy project with a prepared
   history, so the self-checks can be seen without 15-20 real steps.
+- 2026-11-10, your v0.2 hands-on test: it worked; your comment: words like "look-back" and
+  "self-change" don't say what they are about. Approved new words: progress review (was
+  look-back); workflow fix, Fix 1 (was workflow change, E-1); re-check and testing (was
+  check-back and trial); how freely it fixes itself (was evolution level); yours to decide (was
+  protected); `/workflow` (was `/evolve`); files WORKFLOW-FIXES.md, tools/fixes.md,
+  tools/progress-review.md.
+- 2026-11-10: domain packs set aside, in your words: "I think the AI already knows what should
+  be needed for each type of project." v0.3 builds only the add-ons (modules).
 
 ## 13. Open questions
 
-1. Later: which domain pack comes first (v0.3); which 2–3 real projects to test on; whether to
-   offer your research RULES.md lessons as an import.
+1. Later: which 2–3 real projects to test on; whether to offer your research RULES.md lessons
+   as an import.
+2. Domain packs (extra topics and end-product skeletons per kind of project): only if the
+   real-project tests show the interview missing important topics.
