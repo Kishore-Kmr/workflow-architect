@@ -15,15 +15,21 @@ Below, `wf` means `{{python}} tools/wf.py`.
    answer.
 3. **Limits.** Check the action against the limits and "Your notes" in BRIEF.md, RULES.md and
    the "Always ask first" list in AGENTS.md. If it would cross one, ask first.
-4. **Do the action.** One action only, in the end-product part NEXT.md names.
+4. **Do the action.** One action only, in the end-product part NEXT.md names. With add-ons on
+   (STATE.json "addons", see `tools/addons.md`): a paid action goes through `wf spend` first;
+   an experiment runs only after `wf experiment start`; work on a part listed for a second
+   opinion counts as done only after a pass.
 5. **Record.**
    - Update the end product.
    - Log each event: `wf log AI "what happened" --part <part> --tags "<tags>"` (tags below).
      Log the user's actions and words as actor `YOU`.
-   - Update STATE.json only if the phase changed (the next step is then a progress review).
+   - Update STATE.json only if the phase changed: when a phase's work is done, set the next
+     phase; the next step is then a progress review, which ends with the user's go/no-go.
    - Rewrite NEXT.md: exactly one next action, its actor (AI or YOU), its part, "Done when".
      If the next action waits for the user's answer, it is theirs: `Actor: YOU`,
-     `Action: answer: <the question>`. Never leave the action that was just done.
+     `Action: answer: <the question>`. Never leave the action that was just done. For an
+     action by the user, add `Estimated: <how long it will take them>`; if that is more than
+     BRIEF.md allows for one task, split it or ask.
    - Git: {{git policy, e.g. "commit with a message saying what moved; never push" or "do not commit; the user commits" or "no git"}}.
 6. **Health.** Run `wf health`. It checks the files, then reads the log for signs of trouble.
    Fix any file problem and log the fix with `[workflow]`. If it shows a warning or a
@@ -51,7 +57,7 @@ these tags to check its own health, so be accurate rather than generous.
 | `[repeat:<key>]` | the user gave an instruction they had given before |
 | `[asked]` / `[answered]` | you asked the user something / they answered |
 | `[escaped:<where>]` | an error turned up that an earlier check should have caught |
-| `[used:<module>]` | a module listed in STATE.json "modules" was used |
+| `[used:<add-on>]` | an add-on was used (`wf spend`, `opinion` and `experiment` log it themselves) |
 | `[overrun]` | the step took much longer than expected |
 | `[rule:<id>]` | a rule in RULES.md changed what you did |
 | `[review]` | a progress review was done (see `tools/progress-review.md`) |
@@ -78,4 +84,8 @@ something about the workflow is annoying, log their words with `[workflow]` and 
   "review_every" steps and when the phase changes.
 - `wf fix add` / `wf fix mark`: write or update the WORKFLOW-FIXES.md entry by hand, in the
   format shown at the top of WORKFLOW-FIXES.md.
+- Add-on commands (`wf addon`, `spend`, `opinion`, `experiment`): edit STATE.json "addons" and
+  write the lines or files by hand in the formats in `tools/addons.md`. Add up SPENDING.md
+  yourself before every spend: never go over the cap. Before running an experiment, copy its
+  "What each result would mean" into LOG.md, so later edits can be seen.
 <!-- /no-python -->

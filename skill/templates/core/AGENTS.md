@@ -56,4 +56,5 @@ how freely the workflow fixes itself (fix level).
 | `tools/step.md` | how to do one step |
 | `tools/fixes.md` | how the workflow fixes itself; undo; re-interview |
 | `tools/progress-review.md` | the regular progress review by a fresh AI |
-| `tools/wf.py` | status, begin, log, check, health, fix |
+| `tools/addons.md` | extra parts the workflow can switch on: budget, second opinion, experiment plans |
+| `tools/wf.py` | status, begin, log, check, health, fix, add-on commands |

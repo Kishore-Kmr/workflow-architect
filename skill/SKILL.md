@@ -3,7 +3,7 @@ name: workflow-architect
 description: Sets up a small, self-checking workflow for a project in the current folder. Checks the machine, interviews the user adaptively, shows a one-page brief and a structure proposal, writes the files only after approval, and tests them with a practice round. Use when the user starts a new project, asks to set up or plan a project workflow, or types /workflow-architect.
 ---
 
-# workflow-architect (v0.2)
+# workflow-architect (v0.3)
 
 You set up the smallest workflow that fits this user's project, in the current folder. Go
 through the phases in order: 0 resume, 1 machine check, 2 interview, 3 brief, 4 structure
@@ -87,12 +87,12 @@ approval in interview.json with the user's words.
 
 Fill in part 2 of brief-template.md. The core (every project): AGENTS.md, BRIEF.md, NEXT.md,
 STATE.json, LOG.md, DECISIONS.md, QUESTIONS.md, RULES.md, WORKFLOW-FIXES.md, tools/step.md,
-tools/fixes.md, tools/progress-review.md, tools/wf.py (if Python), the end-product parts, and tool
-adapters. Add only what the brief
-justifies, each with the answer behind it. Modules are not built yet (v0.3): if the brief shows a
-need for one, say "needed, coming in a later version". Propose its temporary rule only if the
-need applies to the first phase; for a later stage, only its just-in-time question (see the end
-of brief-template.md). Ask: approve, change, or ask.
+tools/fixes.md, tools/progress-review.md, tools/addons.md, tools/wf.py (if Python), the
+end-product parts, and tool adapters. Add only what the brief justifies, each with the answer
+behind it. Add-ons (`<skill>/templates/core/addons.md`: budget, second opinion, experiment
+plans): if the brief shows a need in the first phase, propose switching it on at setup; ask its
+questions only then. A need in a later stage becomes a just-in-time question that says it will
+switch the add-on on (see the end of brief-template.md). Ask: approve, change, or ask.
 
 ## Phase 5: generate
 
@@ -103,13 +103,13 @@ refused, stop and offer options; don't work around it.
 
 1. **Core files.** `BRIEF.md` is the approved brief. The rest come from `<skill>/templates/core/`:
    replace every `{{...}}` with content from the brief, or delete it where the placeholder says
-   so. `step.md`, `fixes.md` and `progress-review.md` go to `tools/`. In STATE.json,
+   so. `step.md`, `fixes.md`, `progress-review.md` and `addons.md` go to `tools/`. In STATE.json,
    "review_every" is the progress review interval from the brief (default 10) and
    "review_phase" is the first phase.
    Copy `<skill>/scripts/wf.py` to `tools/wf.py` with a file-copy command; don't retype it.
 2. **Python or not.** With Python: delete the `<!-- no-python -->` block (and its markers) from
    tools/step.md. Without: keep the block, don't copy wf.py, set STATE.json "python" to null,
-   and in AGENTS.md, step.md, fixes.md and progress-review.md say the `wf` commands are done by hand
+   and in AGENTS.md, step.md, fixes.md, progress-review.md and addons.md say the `wf` commands are done by hand
    (see tools/step.md).
 3. **End product:** create each agreed part (a file with a heading and a one-line purpose, or a
    folder), and list them in STATE.json "parts" as name -> path. Existing files may be parts:
@@ -124,10 +124,13 @@ refused, stop and offer options; don't work around it.
    - Codex, Copilot and others read AGENTS.md: nothing extra; the user says "do a step" or
      "check the workflow".
    - Existing AGENTS.md: ask before changing it; propose adding a short "Workflow" section.
-5. **RULES.md:** the two core rules, rules from the interview (Origin quotes the answer), and
-   temporary rules for missing modules that apply to the first phase. No rule that repeats the
-   core rules, the "Always ask first" list or a setting. Few: usually 2 to 5; the cap is 12.
-6. **QUESTIONS.md:** open questions, and just-in-time questions with triggers.
+5. **RULES.md:** the two core rules and rules from the interview (Origin quotes the answer).
+   No rule that repeats the core rules, the "Always ask first" list, a setting or what an
+   add-on does. Few: usually 2 to 5; the cap is 12.
+   **Add-ons** agreed for the first phase: switch them on as `tools/addons.md` says. List the
+   ones expected later in STATE.json "addons_later".
+6. **QUESTIONS.md:** open questions, and just-in-time questions with triggers (one that leads
+   to an add-on says so). **NEXT.md:** an action for the user has an `Estimated:` line.
    **DECISIONS.md:** the user's decisions from the interview, word for word and dated,
    including the approvals of the brief and the structure.
 7. **Git** as agreed: `git init` only if approved; `.gitignore` for secrets found. Don't commit

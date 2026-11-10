@@ -1,5 +1,5 @@
 {
-  "workflow_architect": "0.2",
+  "workflow_architect": "0.3",
   "project": "{{short project name}}",
   "phase": "{{first phase name from the brief}}",
   "step": 0,
@@ -16,7 +16,7 @@
   "python": "{{python command, or null without Python}}",
   "git": "{{each-step, manual or none}}",
   "parts": {"{{part-name}}": "{{path to the part}}"},
-  "modules": [],
-  "needed_later": [],
+  "addons": {},
+  "addons_later": [],
   "limits": {}
 }

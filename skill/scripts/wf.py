@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Workflow tool for a project set up by workflow-architect (v0.2).
+"""Workflow tool for a project set up by workflow-architect (v0.3).
 
 Commands (run from anywhere; the project is the folder above tools/, or pass --root DIR):
   status               three-line status, plus a "Due:" line when something is due (read-only)
@@ -17,10 +17,22 @@ Commands (run from anywhere; the project is the folder above tools/, or pass --r
   fix mark F-N STATUS NOTE
                        move a fix on: proposed -> testing (the user approved) or rejected;
                        testing -> kept or undone; kept -> undone
+  addon on NAME [--parts P1,P2]   |   addon off NAME NOTE
+                       switch an add-on on or off (see tools/addons.md); budget and
+                       second-opinion are switched off only with the user's answer logged
+  spend AMOUNT WHAT [--estimate]
+                       budget add-on: record a cost in SPENDING.md; refused over the cap, and
+                       over "ask_over" without the user's answer logged in this step
+  opinion PART pass|fail FINDINGS
+                       second-opinion add-on: record a verdict in SECOND-OPINIONS.md
+  experiment new TITLE   |   experiment start X-NNN
+                       experiment-plans add-on: create a plan; lock its "What each result
+                       would mean" before the run
   practice-done        end the practice round: remove its log lines and files, record it passed
 
-Measures (M): progress, rework, workflow, overrun, escaped, questions, correction:<key>,
-repeat:<key>. Warning ids are the same, plus silent:R-<n>.
+Warning ids: progress, rework, workflow, overrun, escaped, questions, budget,
+second-opinion-quiet, correction:<key>, repeat:<key>, silent:R-<n>, unused:<add-on>. A fix's
+measure (M) is one of them.
 Only the Python standard library is used.
 """
 import hashlib
@@ -31,10 +43,53 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "0.2"
+VERSION = "0.3"
 CORE_FILES = ["BRIEF.md", "NEXT.md", "STATE.json", "LOG.md", "DECISIONS.md", "QUESTIONS.md",
               "RULES.md", "WORKFLOW-FIXES.md", "tools/step.md", "tools/fixes.md",
-              "tools/progress-review.md"]
+              "tools/progress-review.md", "tools/addons.md"]
+# add-on -> who may switch it off: "user" (only with the user's answer logged) or "ai"
+ADDONS = {"budget": "user", "second-opinion": "user", "experiment-plans": "ai"}
+SPENDING_FILE = "SPENDING.md"
+OPINIONS_FILE = "SECOND-OPINIONS.md"
+EXPERIMENTS_DIR = "experiments"
+LOCK_FILE = ".workflow-architect/locks.json"
+PLAN_SECTIONS = ["Question", "Setup", "What each result would mean", "Results",
+                 "What we learned"]
+SPEND_RE = re.compile(r"^- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| "
+                      r"(-?\d+(?:\.\d+)?) \| (estimate|measured) \| (.+)$")
+OPINION_RE = re.compile(r"^- (SO-\d+) \| (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| "
+                        r"([a-z0-9][a-z0-9-]*) \| (pass|fail) \| (.+)$")
+SPENDING_HEADER = """# Spending
+
+Every cost of this project, written with `tools/wf.py spend` (the budget add-on, see
+`tools/addons.md`). The cap is in STATE.json "limits"; only the user can raise it.
+Format: `- time | step | amount | estimate or measured | what`
+
+"""
+OPINIONS_HEADER = """# Second opinions
+
+Verdicts of the second opinion (see `tools/second-opinion.md`), written with
+`tools/wf.py opinion`, newest at the bottom.
+Format: `- SO-<n> | time | step | part | pass or fail | findings`
+
+"""
+PLAN_TEMPLATE = """# {xid} {title}
+
+## Question
+(what we want to find out)
+
+## Setup
+(data, models, how many runs, expected cost)
+
+## What each result would mean
+(for each likely result: what we would conclude, and what we would do next)
+
+## Results
+(after the run)
+
+## What we learned
+(after the run)
+"""
 MAX_INSTRUCTION_LINES = 80
 MAX_RULES = 12
 PRACTICE_PART = "practice"
@@ -47,10 +102,11 @@ TAGS = {"progress": True, "workflow": False, "fail": False, "redo": False, "corr
         "repeat": True, "asked": False, "answered": False, "escaped": True, "used": True,
         "overrun": False, "rule": True, "begin": False, "review": False, "noted": True}
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-MEASURE_RE = re.compile(r"^(progress|rework|workflow|overrun|escaped|questions|"
-                        r"(correction|repeat):[a-z0-9][a-z0-9-]*)$")
-WARNING_RE = re.compile(r"^(progress|rework|workflow|overrun|escaped|questions|"
-                        r"(correction|repeat):[a-z0-9][a-z0-9-]*|silent:R-\d+)$")
+WARNING_RE = re.compile(r"^(progress|rework|workflow|overrun|escaped|questions|budget|"
+                        r"second-opinion-quiet|(correction|repeat):[a-z0-9][a-z0-9-]*|"
+                        r"silent:R-\d+|unused:(" + "|".join(ADDONS) + r"))$")
+MEASURE_RE = WARNING_RE
+NOT_PER_STEP = ("budget", "second-opinion-quiet", "silent", "unused")  # no before/after rate
 HIGHER_IS_BETTER = {"progress"}
 TIME_FMT = "%Y-%m-%d %H:%M"
 ENTRY_RE = re.compile(r"^- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| "
@@ -71,8 +127,8 @@ STATE_SCHEMA = {  # key -> allowed types (all required)
     "practice": (bool,), "brief_version": (int,), "structure_version": (int,),
     "autonomy": (str,), "fix_level": (int,), "review_every": (int,),
     "review_phase": (str,), "recheck_after": (int,), "tools": (list,), "instruction_files": (list,),
-    "python": (str, type(None)), "git": (str,), "parts": (dict,), "modules": (list,),
-    "needed_later": (list,), "limits": (dict,),
+    "python": (str, type(None)), "git": (str,), "parts": (dict,), "addons": (dict,),
+    "addons_later": (list,), "limits": (dict,),
 }
 CHOICES = {"autonomy": {"one-step", "until-you"}, "fix_level": {1, 2, 3},
            "git": {"each-step", "manual", "none"}}
@@ -91,6 +147,9 @@ THRESHOLDS = {
     "silent_rule_steps": 30,      # a rule that has not mattered for this many steps
     "workflow_window": 5,         # process share: of the last this-many steps...
     "workflow_warn_at": 3,        # ...this many were only about the workflow
+    "unused_addon_steps": 20,     # an add-on not used for this many steps
+    "budget_warn_share": 0.8,     # warn when this share of the budget cap is spent
+    "quiet_opinions": 15,         # second opinions in a row that all passed
 }
 
 
@@ -211,6 +270,8 @@ def tag_problems(tags, state, rule_ids, practice_line):
             out.append("[rule:{}]: no rule {} in RULES.md".format(value, value))
         elif name in ("correction", "repeat") and not KEY_RE.match(value):
             out.append("[{}]: key must be lowercase words with hyphens".format(label))
+        elif name == "used" and value not in ADDONS:
+            out.append("[used:{}]: not an add-on (known: {})".format(value, ", ".join(ADDONS)))
         elif name == "noted" and not WARNING_RE.match(value):
             out.append("[{}]: must name a health warning id, like [noted:overrun] or "
                        "[noted:correction:some-key]".format(label))
@@ -268,6 +329,8 @@ def add_log(root, state, actor, what, part="-", tags=()):
             name, _, value = t.partition(":")
             parsed.append((name, value or None))
     problems = tag_problems(parsed, state, rule_ids(root), practice)
+    problems += ["[used:{}]: that add-on is not on".format(v) for n, v in parsed
+                 if n == "used" and v in ADDONS and not addon_on(state, v)]
     if problems:
         raise WfError("; ".join(problems))
     tagtext = " ".join("[{}]".format(n + (":" + v if v else "")) for n, v in parsed)
@@ -344,6 +407,10 @@ def read_next(root):
             len(actions)))
     elif not actions[0].strip():
         problems.append("NEXT.md: the Action line is empty")
+    if (len(actors) == 1 and actors[0].strip() == "YOU"
+            and not re.search(r"^Estimated:[ \t]*\S", text, re.M)):
+        problems.append("NEXT.md: an action for the user needs an 'Estimated:' line (how long "
+                        "it will take them)")
     actor = actors[0].strip() if len(actors) == 1 else None
     action = actions[0].strip() if len(actions) == 1 else None
     return actor, action, problems
@@ -437,6 +504,12 @@ def fix_problems(entries, state):
 
 # ---------- the guard: the user's files change only with the user ----------
 
+def user_answered(entries, step):
+    """Is a line by the user, or an [answered] line, logged in this step?"""
+    return any(e["step"] == step and (e["actor"] == "YOU" or ("answered", None) in e["tags"])
+               for e in entries)
+
+
 def fingerprint(root, state):
     fp = {}
     for f in GUARDED_FILES:
@@ -467,14 +540,201 @@ def guard_problems(root, state, entries):
         return []
     old = guard.get("fingerprint", {})
     changed = [k for k, v in fingerprint(root, state).items() if old.get(k) != v]
-    if not changed:
-        return []
-    if any(e["step"] == step and (e["actor"] == "YOU" or ("answered", None) in e["tags"])
-           for e in entries):
+    if not changed or user_answered(entries, step):
         return []
     return ["{} changed in step {}, but no answer from the user is logged in this step. These "
             "are the user's to change: undo it, or ask and log their answer with "
             "[answered]".format(", ".join(changed), step)]
+
+
+# ---------- add-ons ----------
+
+def addon_on(state, name):
+    addons = state.get("addons")
+    return (isinstance(addons, dict) and isinstance(addons.get(name), dict)
+            and addons[name].get("on") is True)
+
+
+def is_number(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def budget_limits(state):
+    """The user's budget from STATE.json limits, or None if it is not set properly."""
+    limits = state.get("limits") if isinstance(state.get("limits"), dict) else {}
+    b = limits.get("budget")
+    if not isinstance(b, dict):
+        return None
+    cap, ask, cur = b.get("cap"), b.get("ask_over", 0), b.get("currency", "")
+    if not (is_number(cap) and is_number(ask) and isinstance(cur, str) and cap > 0 and ask >= 0):
+        return None
+    return {"cap": float(cap), "ask_over": float(ask), "currency": cur}
+
+
+def parse_lines(root, name, pattern, fmt):
+    """Parse the '- ' lines of an add-on file; return (matches, problems)."""
+    p = root / name
+    if not p.exists():
+        return [], []
+    out, problems = [], []
+    for n, line in enumerate(read(p).splitlines(), 1):
+        if line.startswith("- "):
+            m = pattern.match(line)
+            if m:
+                out.append(m.groups())
+            else:
+                problems.append("{} line {}: not in the format '{}'".format(name, n, fmt))
+    return out, problems
+
+
+def parse_spending(root):
+    rows, problems = parse_lines(root, SPENDING_FILE, SPEND_RE,
+                                 "- time | step | amount | estimate or measured | what")
+    return [{"time": r[0], "step": r[1], "amount": float(r[2]), "kind": r[3], "what": r[4]}
+            for r in rows], problems
+
+
+def parse_opinions(root):
+    rows, problems = parse_lines(root, OPINIONS_FILE, OPINION_RE,
+                                 "- SO-<n> | time | step | part | pass or fail | findings")
+    return [{"id": r[0], "time": r[1], "step": r[2], "part": r[3], "verdict": r[4],
+             "findings": r[5]} for r in rows], problems
+
+
+def plans(root):
+    """Experiment plans: [(id, path)], from experiments/X-<n>-*.md."""
+    d = root / EXPERIMENTS_DIR
+    if not d.is_dir():
+        return []
+    out = []
+    for p in sorted(d.glob("X-*.md")):
+        m = re.match(r"^(X-\d+)", p.name)
+        if m:
+            out.append((m.group(1), p))
+    return out
+
+
+def plan_sections(text):
+    out, cur = {}, None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            cur = line[3:].strip()
+            out[cur] = []
+        elif cur is not None:
+            out[cur].append(line)
+    return {k: "\n".join(v).strip() for k, v in out.items()}
+
+
+def filled(body):
+    """More than placeholders like '(after the run)' or comments?"""
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    lines = [l.strip() for l in body.splitlines() if l.strip()]
+    return any(not (l.startswith("(") and l.endswith(")")) for l in lines)
+
+
+def meaning_hash(sections):
+    text = " ".join(sections.get("What each result would mean", "").split())
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def load_locks(root):
+    p = root / LOCK_FILE
+    if not p.exists():
+        return {}
+    try:
+        locks = json.loads(read(p))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return locks if isinstance(locks, dict) else None
+
+
+def experiment_problems(root):
+    locks = load_locks(root)
+    if locks is None:
+        return [LOCK_FILE + ": not valid JSON"]
+    out = []
+    found = plans(root)
+    if len({x for x, _ in found}) != len(found):
+        out.append("experiments/: two plans share an id")
+    for xid, p in found:
+        s = plan_sections(read(p))
+        missing = [h for h in PLAN_SECTIONS if h not in s]
+        if missing:
+            out.append("experiments/{}: missing section(s): {}".format(p.name, ", ".join(missing)))
+            continue
+        lock = locks.get(xid)
+        if isinstance(lock, dict):
+            if meaning_hash(s) != lock.get("hash"):
+                out.append("experiments/{}: 'What each result would mean' was changed after the "
+                           "experiment started ({}). Restore it as it was, and put new thoughts "
+                           "under 'What we learned'".format(p.name, lock.get("step", "?")))
+        elif filled(s["Results"]):
+            out.append("experiments/{}: has results, but the experiment was never started: run "
+                       "'wf.py experiment start {}' before running an experiment".format(p.name,
+                                                                                         xid))
+    return out
+
+
+def addon_problems(root, state):
+    out = []
+    addons = state.get("addons") if isinstance(state.get("addons"), dict) else {}
+    parts = state.get("parts") if isinstance(state.get("parts"), dict) else {}
+    for name, a in addons.items():
+        if name not in ADDONS:
+            out.append("STATE.json addons: unknown add-on '{}' (known: {})".format(
+                name, ", ".join(ADDONS)))
+        elif not (isinstance(a, dict) and isinstance(a.get("on"), bool)
+                  and isinstance(a.get("since"), int) and not isinstance(a.get("since"), bool)):
+            out.append("STATE.json addons: '{}' needs \"on\" (true or false) and \"since\" (a "
+                       "step number)".format(name))
+    later = state.get("addons_later") if isinstance(state.get("addons_later"), list) else []
+    for name in later:
+        if name not in ADDONS:
+            out.append("STATE.json addons_later: unknown add-on '{}'".format(name))
+    if addon_on(state, "budget"):
+        b = budget_limits(state)
+        if b is None:
+            out.append("budget add-on: STATE.json limits.budget needs \"cap\" (above 0), "
+                       "\"currency\" and \"ask_over\" (0 or more), from the user's answer")
+        if not (root / SPENDING_FILE).exists():
+            out.append("missing file: " + SPENDING_FILE + " (the budget add-on is on)")
+        spends, problems = parse_spending(root)
+        out += problems
+        total = sum(x["amount"] for x in spends)
+        if b and total > b["cap"] + 1e-9:
+            out.append("{}: {:.2f} {} spent, over the cap of {:.2f}; only the user can raise "
+                       "the cap".format(SPENDING_FILE, total, b["currency"], b["cap"]))
+    if addon_on(state, "second-opinion"):
+        listed = addons["second-opinion"].get("parts")
+        if not isinstance(listed, list) or not listed:
+            out.append("second-opinion add-on: STATE.json addons.second-opinion needs "
+                       "\"parts\": the parts it checks")
+        else:
+            out += ["second-opinion add-on: '{}' is not a part in STATE.json".format(x)
+                    for x in listed if x not in parts]
+        for f in ("tools/second-opinion.md", OPINIONS_FILE):
+            if not (root / f).exists():
+                out.append("missing file: {} (the second-opinion add-on is on; see "
+                           "tools/addons.md)".format(f))
+        out += parse_opinions(root)[1]
+    if addon_on(state, "experiment-plans") and not (root / EXPERIMENTS_DIR).is_dir():
+        out.append("missing folder: experiments/ (the experiment-plans add-on is on)")
+    return out + experiment_problems(root)     # plans stay checked when the add-on is off
+
+
+def addons_summary(root, state):
+    out = []
+    if addon_on(state, "budget"):
+        b = budget_limits(state)
+        spent = sum(x["amount"] for x in parse_spending(root)[0])
+        out.append("budget {:.2f} of {:.2f} {}".format(spent, b["cap"], b["currency"]) if b
+                   else "budget (cap not set)")
+    if addon_on(state, "second-opinion"):
+        out.append("second opinion on " + ", ".join(
+            state["addons"]["second-opinion"].get("parts") or ["?"]))
+    if addon_on(state, "experiment-plans"):
+        out.append("experiment plans ({} started)".format(len(load_locks(root) or {})))
+    return "; ".join(out)
 
 
 # ---------- check ----------
@@ -573,6 +833,7 @@ def check(root):
     if not state.get("practice") and (root / PRACTICE_FILE).exists():
         problems.append(PRACTICE_FILE + " left over from the practice round")
     problems += evo_problems + fix_problems(evo, state)
+    problems += addon_problems(root, state)
     problems += guard_problems(root, state, entries)
     return problems
 
@@ -604,7 +865,9 @@ def analyse(root):
     ctx = {"root": root, "state": state, "evo": evo, "th": th, "steps": steps,
            "nums": sorted(steps), "cur": cur if isinstance(cur, int) else 0,
            "dates": sorted({e["time"][:10] for e in entries if e["step"].startswith("S-")}),
-           "questions": parse_questions(root), "rules": parse_rules(root)}
+           "questions": parse_questions(root), "rules": parse_rules(root),
+           "spent": sum(x["amount"] for x in parse_spending(root)[0]),
+           "opinions": parse_opinions(root)[0]}
     ctx["long"] = long_steps(ctx)
     return ctx
 
@@ -645,6 +908,8 @@ def flag(metric, step, ctx):
 
 
 def metric_value(ctx, metric, step_list):
+    if metric.split(":")[0] in NOT_PER_STEP:
+        return None
     if metric == "questions":
         return float(len(ctx["questions"]["open"]))
     if not step_list:
@@ -653,6 +918,8 @@ def metric_value(ctx, metric, step_list):
 
 
 def before_text(ctx, metric):
+    if metric.split(":")[0] in NOT_PER_STEP:
+        return "0 (not measured per step)"
     if metric == "questions":
         return "{} open questions".format(len(ctx["questions"]["open"]))
     window = [ctx["steps"][n] for n in ctx["nums"] if n <= ctx["cur"]][-ctx["th"]["window"]:]
@@ -729,7 +996,9 @@ def warnings(ctx):
     if hits:
         where = sorted({v for s in hits for n, v in s["tags"] if n == "escaped"})
         warn("escaped", "an error got past a check: {} ({})".format(
-            ", ".join(where), names(hits)), "tighten the check that missed it")
+            ", ".join(where), names(hits)),
+            "tighten the check that missed it, or propose a second opinion on that part "
+            "(switching an add-on on is a big fix)")
     hits = [s for s in since("overrun", th["window"]) if flag("overrun", s, ctx)]
     if hits:
         details = []
@@ -765,6 +1034,36 @@ def warnings(ctx):
                                            for n in nums if n > cur - span):
             warn("silent:" + r["id"], "rule {} has not mattered in {} steps".format(
                 r["id"], span), "pause it (small) or merge it into another rule")
+    state = ctx["state"]
+    addons = state.get("addons") if isinstance(state.get("addons"), dict) else {}
+    span = th["unused_addon_steps"]
+    for name in sorted(n for n in addons if n in ADDONS and addon_on(state, n)):
+        since = addons[name].get("since") if isinstance(addons[name].get("since"), int) else 0
+        start = max(since, handled(ctx, "unused:" + name))
+        if cur - start >= span and not any(has(steps[n], "used", name)
+                                           for n in nums if n > cur - span):
+            warn("unused:" + name, "add-on {} has not been used in {} steps".format(name, span),
+                 "switch it off (a small fix)" if ADDONS[name] == "ai" else
+                 "ask the user whether to switch it off (theirs to decide)")
+    b = budget_limits(state) if addon_on(state, "budget") else None
+    hb = handled(ctx, "budget")
+    if b and ctx["spent"] >= th["budget_warn_share"] * b["cap"] and (
+            not hb or cur - hb >= th["window"]):
+        warn("budget", "{:.2f} of {:.2f} {} spent ({:.0f}% of the cap)".format(
+            ctx["spent"], b["cap"], b["currency"], 100 * ctx["spent"] / b["cap"]),
+            "tell the user and plan the rest of the spending; raising the cap is theirs to "
+            "decide")
+    if addon_on(state, "second-opinion"):
+        hq = handled(ctx, "second-opinion-quiet")
+        streak = 0
+        for o in reversed(ctx["opinions"]):
+            if o["verdict"] != "pass" or not o["step"].startswith("S-") or (
+                    int(o["step"][2:]) <= hq):
+                break
+            streak += 1
+        if streak >= th["quiet_opinions"]:
+            warn("second-opinion-quiet", "the last {} second opinions all passed".format(streak),
+                 "use it on fewer parts or less often (the user's to decide)")
     return out
 
 
@@ -846,6 +1145,9 @@ def status_lines(root):
             len(q["open"]), q["later"], "OK" if not problems else
             "{} problem(s), run: wf.py check".format(len(problems))),
     ]
+    summary = addons_summary(root, state)
+    if summary:
+        lines.append("Add-ons: " + summary)
     if not state.get("practice"):
         due = due_items(analyse(root))
         if due:
@@ -1063,6 +1365,180 @@ def cmd_fix(root, argv):
     raise WfError(FIX_USAGE)
 
 
+def require_user_answer(root, state, why):
+    entries, _ = parse_log(root)
+    if not user_answered(entries, current_step_id(state)):
+        raise WfError(why + ": ask the user, log their answer with [answered], then run this "
+                      "again")
+
+
+def cmd_addon(root, argv):
+    usage = 'usage: wf.py addon on NAME [--parts P1,P2]  |  wf.py addon off NAME "why"'
+    if len(argv) < 2 or argv[0] not in ("on", "off"):
+        raise WfError(usage)
+    action, name = argv[0], argv[1]
+    if name not in ADDONS:
+        raise WfError("unknown add-on '{}' (known: {})".format(name, ", ".join(ADDONS)))
+    state = load_state(root)
+    addons = state.get("addons") if isinstance(state.get("addons"), dict) else {}
+    if action == "off":
+        note = one_line(" ".join(argv[2:]))
+        if not note:
+            raise WfError(usage)
+        if not addon_on(state, name):
+            raise WfError("add-on {} is not on".format(name))
+        if ADDONS[name] == "user":
+            require_user_answer(root, state, "only the user may switch off " + name)
+        addons[name]["on"] = False
+        state["addons"] = addons
+        save_state(root, state)
+        add_log(root, state, "AI", "add-on {} switched off: {}".format(name, note),
+                tags=["workflow"])
+        print("add-on {} is off; its files are kept".format(name))
+        return
+    opts, _ = take_opts(argv[2:], ("--parts",))
+    if addon_on(state, name):
+        raise WfError("add-on {} is already on".format(name))
+    entry = {"on": True, "since": state.get("step", 0)}
+    if name == "budget":
+        if budget_limits(state) is None:
+            raise WfError('first put the user\'s answer in STATE.json "limits", like "budget": '
+                          '{"cap": 30, "currency": "USD", "ask_over": 5}')
+        if not (root / SPENDING_FILE).exists():
+            write(root / SPENDING_FILE, SPENDING_HEADER)
+    elif name == "second-opinion":
+        listed = (opts.get("--parts") or "").replace(",", " ").split()
+        if not listed:
+            raise WfError("--parts is needed: the parts that need a second opinion")
+        bad = [x for x in listed if x not in state.get("parts", {})]
+        if bad:
+            raise WfError("not parts in STATE.json: " + ", ".join(bad))
+        entry["parts"] = listed
+        if not (root / OPINIONS_FILE).exists():
+            write(root / OPINIONS_FILE, OPINIONS_HEADER)
+    else:
+        (root / EXPERIMENTS_DIR).mkdir(exist_ok=True)
+    addons[name] = entry
+    state["addons"] = addons
+    if isinstance(state.get("addons_later"), list):
+        state["addons_later"] = [x for x in state["addons_later"] if x != name]
+    save_state(root, state)
+    add_log(root, state, "AI", "add-on {} switched on".format(name), tags=["workflow"])
+    print("add-on {} is on{}".format(name, "; now write tools/second-opinion.md (see "
+                                           "tools/addons.md)" if name == "second-opinion"
+                                     else ""))
+
+
+def cmd_spend(root, argv):
+    estimate = "--estimate" in argv
+    rest = [a for a in argv if a != "--estimate"]
+    if len(rest) < 2:
+        raise WfError('usage: wf.py spend AMOUNT "what" [--estimate]')
+    try:
+        amount = float(rest[0])
+    except ValueError:
+        raise WfError("AMOUNT must be a number, like 0.50")
+    what = one_line(" ".join(rest[1:]).replace("|", "/"))
+    state = load_state(root)
+    if not addon_on(state, "budget"):
+        raise WfError("the budget add-on is not on (see tools/addons.md)")
+    b = budget_limits(state)
+    if b is None:
+        raise WfError('STATE.json limits.budget is not set (see tools/addons.md)')
+    spends, problems = parse_spending(root)
+    if problems:
+        raise WfError("; ".join(problems))
+    total = sum(x["amount"] for x in spends) + amount
+    if total > b["cap"] + 1e-9:
+        raise WfError("over the cap: this would make {:.2f} of {:.2f} {}. Ask the user; only "
+                      "they can raise the cap".format(total, b["cap"], b["currency"]))
+    if total < -1e-9:
+        raise WfError("the total would go below zero")
+    if amount > b["ask_over"]:
+        require_user_answer(root, state, "a single cost over {:.2f} {} needs the user's OK "
+                            "first".format(b["ask_over"], b["currency"]))
+    kind = "estimate" if estimate else "measured"
+    append_line(root / SPENDING_FILE, "- {} | {} | {:.2f} | {} | {}".format(
+        now(), current_step_id(state), amount, kind, what))
+    add_log(root, state, "AI", "spent {:.2f} {} ({}): {}".format(amount, b["currency"], kind,
+                                                                 what), tags=["used:budget"])
+    print("recorded {:.2f}; total {:.2f} of {:.2f} {}".format(amount, total, b["cap"],
+                                                              b["currency"]))
+
+
+def cmd_opinion(root, argv):
+    if len(argv) < 3 or argv[1] not in ("pass", "fail"):
+        raise WfError('usage: wf.py opinion PART pass|fail "findings, short"')
+    part, verdict = argv[0], argv[1]
+    findings = one_line(" ".join(argv[2:]).replace("|", "/"))
+    state = load_state(root)
+    if not addon_on(state, "second-opinion"):
+        raise WfError("the second-opinion add-on is not on (see tools/addons.md)")
+    listed = state["addons"]["second-opinion"].get("parts") or []
+    if part not in listed:
+        raise WfError("part '{}' is not listed for a second opinion (listed: {})".format(
+            part, ", ".join(listed)))
+    opinions, problems = parse_opinions(root)
+    if problems:
+        raise WfError("; ".join(problems))
+    sid = "SO-{}".format(len(opinions) + 1)
+    append_line(root / OPINIONS_FILE, "- {} | {} | {} | {} | {} | {}".format(
+        sid, now(), current_step_id(state), part, verdict, findings))
+    add_log(root, state, "AI", "second opinion {} on {}: {}: {}".format(sid, part, verdict,
+                                                                        findings),
+            part=part, tags=["used:second-opinion"])
+    print("{}: {} ({})".format(sid, verdict, part))
+
+
+def cmd_experiment(root, argv):
+    usage = 'usage: wf.py experiment new "title"  |  wf.py experiment start X-NNN'
+    if not argv or argv[0] not in ("new", "start"):
+        raise WfError(usage)
+    state = load_state(root)
+    if not addon_on(state, "experiment-plans"):
+        raise WfError("the experiment-plans add-on is not on (see tools/addons.md)")
+    if argv[0] == "new":
+        title = one_line(" ".join(argv[1:]))
+        if not title:
+            raise WfError(usage)
+        (root / EXPERIMENTS_DIR).mkdir(exist_ok=True)
+        xid = "X-{:03d}".format(max([int(x[2:]) for x, _ in plans(root)] or [0]) + 1)
+        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40] or "plan"
+        p = root / EXPERIMENTS_DIR / "{}-{}.md".format(xid, slug)
+        write(p, PLAN_TEMPLATE.format(xid=xid, title=title))
+        add_log(root, state, "AI", "experiment plan {} created: {}".format(xid, title),
+                tags=["used:experiment-plans"])
+        print(p.relative_to(root).as_posix())
+        return
+    if len(argv) < 2:
+        raise WfError(usage)
+    xid = argv[1]
+    found = [p for x, p in plans(root) if x == xid]
+    if not found:
+        raise WfError("no plan {} in experiments/".format(xid))
+    s = plan_sections(read(found[0]))
+    missing = [h for h in PLAN_SECTIONS if h not in s]
+    if missing:
+        raise WfError("{}: missing section(s): {}".format(found[0].name, ", ".join(missing)))
+    for h in ("Question", "Setup", "What each result would mean"):
+        if not filled(s[h]):
+            raise WfError("{}: fill in '{}' before the start".format(found[0].name, h))
+    if filled(s["Results"]):
+        raise WfError("{}: results are already written; a plan is started before the run".format(
+            found[0].name))
+    locks = load_locks(root)
+    if locks is None:
+        raise WfError(LOCK_FILE + " is not valid JSON")
+    if xid in locks:
+        raise WfError("{} was already started".format(xid))
+    locks[xid] = {"hash": meaning_hash(s), "step": current_step_id(state), "time": now()}
+    (root / LOCK_FILE).parent.mkdir(exist_ok=True)
+    write(root / LOCK_FILE, json.dumps(locks, indent=2) + "\n")
+    add_log(root, state, "AI", "experiment {} started; 'What each result would mean' is "
+                               "locked".format(xid), tags=["used:experiment-plans"])
+    print("{} started; its 'What each result would mean' is locked".format(xid))
+
+
 def cmd_practice_done(root, argv):
     state = load_state(root)
     if not state.get("practice"):
@@ -1090,7 +1566,8 @@ def cmd_practice_done(root, argv):
 
 COMMANDS = {"status": lambda r, a: print("\n".join(status_lines(r))), "begin": cmd_begin,
             "log": cmd_log, "check": cmd_check, "health": cmd_health, "fix": cmd_fix,
-            "practice-done": cmd_practice_done}
+            "addon": cmd_addon, "spend": cmd_spend, "opinion": cmd_opinion,
+            "experiment": cmd_experiment, "practice-done": cmd_practice_done}
 
 
 def main(argv):

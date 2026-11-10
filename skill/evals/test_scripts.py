@@ -16,7 +16,7 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parent.parent
 CORE = SKILL / "templates" / "core"
 PLACEHOLDER = re.compile(r"\{\{[^}]*\}\}")
-TOOL_FILES = ("step.md", "fixes.md", "progress-review.md")
+TOOL_FILES = ("step.md", "fixes.md", "progress-review.md", "addons.md")
 
 
 def run(args, cwd=None):
@@ -175,8 +175,8 @@ class WfTest(ProjectCase):
 F = "%Y-%m-%d %H:%M"
 
 
-class FixTest(ProjectCase):
-    """v0.2: health warnings, workflow fixes, re-checks, fix levels, progress review, guard."""
+class HistoryCase(ProjectCase):
+    """A project with helpers for made-up history and health output."""
 
     def state(self, **changes):
         p = self.root / "STATE.json"
@@ -239,6 +239,10 @@ class FixTest(ProjectCase):
                     "--undo", "delete R-3 from RULES.md"])
 
     P = "progress:outline"
+
+
+class FixTest(HistoryCase):
+    """v0.2: health warnings, workflow fixes, re-checks, fix levels, progress review, guard."""
 
     def test_fresh_health_is_quiet(self):
         out = self.wf_ok("health")
@@ -397,6 +401,126 @@ class FixTest(ProjectCase):
         self.wf_ok("begin")
         self.state(fix_level=3)
         self.wf_fails("check", expect="STATE.json fix_level changed")
+
+
+class AddonTest(HistoryCase):
+    """v0.3: add-ons (budget, second opinion, experiment plans) and the core lines."""
+
+    def budget(self, cap=30, ask_over=5):
+        limits = self.state()["limits"]
+        limits["budget"] = {"cap": cap, "currency": "USD", "ask_over": ask_over}
+        self.state(limits=limits)
+
+    def test_switching_on_and_off(self):
+        self.wf_fails("log", "AI", "x", "--tags", "used:budget", expect="not on")
+        self.wf_fails("addon", "on", "hours", expect="unknown add-on")
+        self.wf_fails("addon", "on", "budget", expect="first put the user's answer")
+        self.budget()
+        self.wf_ok("addon", "on", "budget")
+        self.assertTrue((self.root / "SPENDING.md").exists())
+        self.assertIn("Add-ons: budget 0.00 of 30.00 USD", self.wf_ok("status"))
+        self.assertIn("check: OK", self.wf_ok("check"))
+        self.wf_fails("addon", "off", "budget", "not needed", expect="only the user may")
+        self.wf_ok("log", "YOU", "said: switch the budget off", "--tags", "answered")
+        self.wf_ok("addon", "off", "budget", "you asked")
+        self.assertFalse(self.state()["addons"]["budget"]["on"])
+        self.wf_ok("addon", "on", "experiment-plans")
+        self.wf_ok("addon", "off", "experiment-plans", "unused")     # the AI may
+        self.assertIn("check: OK", self.wf_ok("check"))
+
+    def test_spending_cap_and_ask_first(self):
+        self.budget(cap=10, ask_over=2)
+        self.wf_ok("addon", "on", "budget")
+        self.wf_ok("spend", "1.50", "pilot: 150 grader calls", "--estimate")
+        self.assertIn("| 1.50 | estimate | pilot: 150 grader calls",
+                      (self.root / "SPENDING.md").read_text(encoding="utf-8"))
+        self.assertIn("[used:budget]", self.log_text())
+        self.wf_fails("spend", "3", "bigger run", expect="needs the user's OK first")
+        self.wf_ok("log", "YOU", "said: yes, spend 3", "--tags", "answered")
+        self.wf_ok("spend", "3", "bigger run")
+        self.wf_fails("spend", "6", "too much", expect="over the cap")
+        self.assertNotIn("budget", self.warning_ids())
+        self.wf_ok("spend", "4", "third run")                         # 8.50 of 10
+        self.assertIn("budget", self.warning_ids())
+        self.wf_ok("spend", "-0.5", "third run: measured, cost less")
+        self.assertIn("check: OK", self.wf_ok("check"))
+        sp = self.root / "SPENDING.md"
+        sp.write_text(sp.read_text(encoding="utf-8") +
+                      "- 2026-01-01 10:00 | - | 5.00 | measured | by hand\n", encoding="utf-8")
+        self.wf_fails("check", expect="over the cap")
+
+    def test_second_opinion(self):
+        self.history([self.P])
+        self.wf_fails("addon", "on", "second-opinion", expect="--parts is needed")
+        self.wf_fails("addon", "on", "second-opinion", "--parts", "nope", expect="not parts")
+        self.wf_ok("addon", "on", "second-opinion", "--parts", "outline")
+        self.wf_fails("check", expect="missing file: tools/second-opinion.md")
+        (self.root / "tools" / "second-opinion.md").write_text("# Second opinion\n",
+                                                               encoding="utf-8")
+        self.assertIn("check: OK", self.wf_ok("check"))
+        self.wf_ok("opinion", "outline", "fail", "heading 3 has no source")
+        self.wf_fails("opinion", "intro", "pass", "x", expect="not listed")
+        self.assertIn("- SO-1 |", (self.root / "SECOND-OPINIONS.md").read_text(encoding="utf-8"))
+        for _ in range(15):
+            self.wf_ok("opinion", "outline", "pass", "no problems found")
+        self.assertIn("second-opinion-quiet", self.warning_ids())
+        self.wf_ok("log", "YOU", "said keep it as it is", "--tags",
+                   "answered noted:second-opinion-quiet")
+        self.assertNotIn("second-opinion-quiet", self.warning_ids())
+        self.assertIn("check: OK", self.wf_ok("check"))
+
+    def test_experiment_plan_is_locked(self):
+        self.wf_ok("addon", "on", "experiment-plans")
+        path = self.wf_ok("experiment", "new", "Pilot: longer answers?").strip()
+        self.assertEqual(path, "experiments/X-001-pilot-longer-answers.md")
+        plan = self.root / path
+        self.wf_fails("experiment", "start", "X-001", expect="fill in 'Question'")
+        text = plan.read_text(encoding="utf-8")
+        for old, new in (("(what we want to find out)", "Do graders prefer longer answers?"),
+                         ("(data, models, how many runs, expected cost)", "20 pairs, mock grader"),
+                         ("(for each likely result: what we would conclude, and what we would "
+                          "do next)", "Longer wins over 60%: go on. Otherwise: stop.")):
+            text = text.replace(old, new)
+        plan.write_text(text.replace("## Results\n(after the run)", "## Results\nlonger won 70%"),
+                        encoding="utf-8")
+        self.wf_fails("check", expect="was never started")
+        self.wf_fails("experiment", "start", "X-001", expect="results are already written")
+        plan.write_text(text, encoding="utf-8")
+        self.wf_ok("experiment", "start", "X-001")
+        self.wf_fails("experiment", "start", "X-001", expect="already started")
+        plan.write_text(text.replace("over 60%", "over 50%"), encoding="utf-8")
+        self.wf_fails("check", expect="was changed after the experiment started")
+        plan.write_text(text.replace("## Results\n(after the run)", "## Results\nlonger won 70%"),
+                        encoding="utf-8")
+        self.assertIn("check: OK", self.wf_ok("check"))
+        self.assertIn("experiment plans (1 started)", self.wf_ok("status"))
+
+    def test_unused_addons(self):
+        self.budget()
+        self.wf_ok("addon", "on", "budget")
+        self.wf_ok("addon", "on", "experiment-plans")
+        self.history([self.P] * 19)
+        self.assertFalse([w for w in self.warning_ids() if w.startswith("unused")])
+        self.history([self.P])
+        warnings = {w["id"]: w for w in self.health()["warnings"]}
+        self.assertIn("switch it off (a small fix)", warnings["unused:experiment-plans"]["fix"])
+        self.assertIn("ask the user", warnings["unused:budget"]["fix"])
+        code, out = run([self.wf, "fix", "add", "switched off experiment plans (unused)",
+                         "--size", "small", "--by", "ai", "--measure",
+                         "unused:experiment-plans", "--evidence", "unused 20 steps",
+                         "--undo", "wf addon on experiment-plans"])
+        self.assertEqual(code, 0, out)
+        self.assertIn("- Before: 0 (not measured per step)", self.fixes())
+        self.assertNotIn("unused:experiment-plans", self.warning_ids())
+        self.assertIn("check: OK", self.wf_ok("check"))
+
+    def test_task_for_the_user_needs_an_estimate(self):
+        nxt = self.root / "NEXT.md"
+        nxt.write_text("Actor: YOU\nAction: label 50 answers\nPart: outline\nDone when: x\n",
+                       encoding="utf-8")
+        self.wf_fails("check", expect="needs an 'Estimated:' line")
+        nxt.write_text(nxt.read_text(encoding="utf-8") + "Estimated: 1 h\n", encoding="utf-8")
+        self.assertIn("check: OK", self.wf_ok("check"))
 
 
 if __name__ == "__main__":

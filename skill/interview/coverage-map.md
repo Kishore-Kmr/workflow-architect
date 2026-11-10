@@ -52,7 +52,8 @@ stage.
 - Relevant: the goal needs hands-on human work: expert judgement, labelling, user tests,
   interviews, writing.
 - Find out: what kind; hours per week available; the most one task may take.
-- Feeds: STATE.json "limits"; YOU actions; a warning before big manual tasks.
+- Feeds: BRIEF.md "Your time"; the `Estimated:` line on every YOU action (a task over the
+  limit is split or asked about).
 - When: later: "the first task that needs more than a quick answer from you" (e.g. the first
   labelling task).
 
@@ -60,7 +61,7 @@ stage.
 - Relevant: GPUs, cloud compute, paid APIs or LLM calls, bought data, paid annotators,
   services, hosting.
 - Find out: which; a spending cap; whether each spend needs approval.
-- Feeds: STATE.json "limits"; the budget module (v0.3; until then a temporary rule).
+- Feeds: STATE.json "limits"; the budget add-on.
 - When: later: "when the first task that would spend money is planned" (e.g. the first
   experiment). Until then the "Always ask first" list already requires asking before any spend.
 
@@ -75,8 +76,7 @@ stage.
 ## quality: Quality and verification
 - Relevant: always; the form varies (tests, validation, editing, a reader, a demo).
 - Find out: how we will check the work is right; which errors would be costly or hard to see.
-- Feeds: "Done when" lines; checkable rules; the reviewer module (v0.3; until then a
-  temporary rule).
+- Feeds: "Done when" lines; checkable rules; the second-opinion add-on.
 - When: brief (propose how the first phase is checked, **OK?**); later for each new phase.
 
 ## value-novelty: Value and novelty
