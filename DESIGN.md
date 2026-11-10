@@ -1,9 +1,8 @@
 # workflow-architect — design
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
-Status: v0.1 and v0.2 built and tested (see `tests/`). v0.3 (three add-ons, plainer words)
-built, self-tested and simulation-tested (4 runs passed); your hands-on test next
-(`../wa-v03-handson/`, section 10). Decisions so far: section 12. Open questions: section 13.
+Status: v0.1, v0.2 and v0.3 built and tested (see `tests/`); v0.3 closed 2026-11-10 on the
+builder's tests. Next: v0.4 (section 10). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
@@ -414,6 +413,8 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   become two core lines (check the brief's "Stop if" list at each phase end and ask you; a time
   estimate on every task for you). Discarded: workers/helpers, two strikes and time limits,
   checks and hooks as an add-on (a workflow fix can add a check), "worth it?" check.
+- 2026-11-10: v0.3 closed without your hands-on test, in your words: "Your tests alone are
+  sufficient for this."
 
 ## 13. Open questions
 
