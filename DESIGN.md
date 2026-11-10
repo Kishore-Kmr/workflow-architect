@@ -356,7 +356,9 @@ skill/
    2026-11-10: progress review, workflow fixes, `/workflow`).
 3. **v0.3:** the three add-ons (section 5) and the two core lines; the plainer words of
    2026-11-10. Domain packs and the other modules are set aside or discarded (section 12).
-4. **v0.4:** full tests (section 9), lesson import, learning across projects, docs.
+4. **v0.4:** five generic lessons from your research repo's RULES.md, added to the core
+   (section 12, 2026-11-10). Full tests, docs and learning across projects are deferred
+   (section 13).
 
 ## 11. Not in scope for now
 
@@ -415,6 +417,10 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   checks and hooks as an add-on (a workflow fix can add a check), "worth it?" check.
 - 2026-11-10: v0.3 closed without your hands-on test, in your words: "Your tests alone are
   sufficient for this."
+- 2026-11-10: v0.4 shrunk, in your words: "go with the 5 lessons and defer the rest". From your
+  research RULES.md, five generic lessons go into the core: a stop record; secrets used only by
+  code; every number names its source; pilot before scale; stage only the files you changed.
+  Deferred: full tests, docs, learning across projects (with the research-specific lessons).
 
 ## 13. Open questions
 
@@ -422,6 +428,10 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
    as an import.
 2. Domain packs (extra topics and end-product skeletons per kind of project): only if the
    real-project tests show the interview missing important topics.
-3. The progress rate counts steps tagged progress, not how much moved (a v0.3 run: tightening
+3. Deferred 2026-11-10: the full tests of section 9 (simulated users at scale, comparison with
+   plain Claude Code, 2-3 real projects), docs, and learning across projects (a lesson library
+   fed by fixes kept after their re-check, offered at setup; your research repo's specific
+   lessons would be its first entries).
+4. The progress rate counts steps tagged progress, not how much moved (a v0.3 run: tightening
    one-sentence sections counted as progress while the draft stayed at 258 words). The progress
    review is meant to catch this; a size-aware measure only if real use shows the need.
