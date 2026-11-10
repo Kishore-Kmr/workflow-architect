@@ -5,10 +5,10 @@ This repo builds `workflow-architect`, a personal skill for AI coding tools
 interviews the user adaptively, builds the smallest workflow that fits, and lets that workflow
 check itself and evolve.
 
-**Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-07: design draft 4;
-v0.1 built and tested (closed). v0.2 (evolution engine) built and self-tested
-(`python skill/evals/test_scripts.py`) and simulation-tested (`tests/`). Next: the user's
-hands-on test in `../wa-v02-handson/` (made by `skill/evals/make_toy.py`), then v0.3.
+**Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-10: design draft 4;
+v0.1 and v0.2 built and tested (closed). v0.3 (three add-ons: budget, second opinion, experiment
+plans; plainer words) built and self-tested (`python skill/evals/test_scripts.py`). Next: v0.3
+simulated runs (toys from `skill/evals/make_toy.py`), then the user's hands-on test.
 
 ## How to work here
 
