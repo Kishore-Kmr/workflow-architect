@@ -7,8 +7,9 @@ check itself and evolve.
 
 **Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-10: design draft 4;
 v0.1 and v0.2 built and tested (closed). v0.3 (three add-ons: budget, second opinion, experiment
-plans; plainer words) built and self-tested (`python skill/evals/test_scripts.py`). Next: v0.3
-simulated runs (toys from `skill/evals/make_toy.py`), then the user's hands-on test.
+plans; plainer words) built, self-tested (`python skill/evals/test_scripts.py`) and
+simulation-tested (`tests/`). Next: the user's hands-on test in `../wa-v03-handson/` (made by
+`skill/evals/make_toy.py --scenario budget`).
 
 ## How to work here
 

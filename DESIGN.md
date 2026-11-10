@@ -2,7 +2,8 @@
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
 Status: v0.1 and v0.2 built and tested (see `tests/`). v0.3 (three add-ons, plainer words)
-built and self-tested; simulated runs and your hands-on test next (section 10). Decisions so far: section 12. Open questions: section 13.
+built, self-tested and simulation-tested (4 runs passed); your hands-on test next
+(`../wa-v03-handson/`, section 10). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
@@ -420,3 +421,6 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
    as an import.
 2. Domain packs (extra topics and end-product skeletons per kind of project): only if the
    real-project tests show the interview missing important topics.
+3. The progress rate counts steps tagged progress, not how much moved (a v0.3 run: tightening
+   one-sentence sections counted as progress while the draft stayed at 258 words). The progress
+   review is meant to catch this; a size-aware measure only if real use shows the need.

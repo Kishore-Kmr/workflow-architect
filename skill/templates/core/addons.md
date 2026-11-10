@@ -15,7 +15,8 @@ Switching an add-on on is a big workflow fix; who may switch it off is said belo
   the user's OK first.
 - **Switch on:** log the user's answer with `[answered]`, put it in STATE.json "limits" as
   `"budget": {"cap": 30, "currency": "USD", "ask_over": 5}`, then `wf addon on budget`. It
-  creates SPENDING.md.
+  creates SPENDING.md. In the same step, write their answer into the "External spending" line
+  of BRIEF.md, so the brief and the budget say the same thing.
 - **While on:** before any paid action, estimate its cost and record it:
   `wf spend <amount> "<what>" --estimate`. `wf` refuses a spend that would go over the cap,
   and a single cost over "ask_over" unless the user's OK is logged in this step. When the real
