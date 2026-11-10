@@ -26,6 +26,7 @@ v0.3 add-ons:
 SCENARIOS = ["correction", "level1", "protected", "rollback", "budget", "escaped", "unused",
              "experiment"]
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -221,65 +222,170 @@ ESCAPED_2 = [
      "escaped:done-check"),
     ("AI", "removed the claim", "related-work", "redo"),
 ]
-MORE_STEPS = [  # S-013 to S-022 for the "unused" scenario; S-020 is a progress review
-    [("AI", "drafted the Method outline", "outline", "progress:outline")],
-    [("AI", "drafted the Introduction outline", "outline", "progress:outline")],
-    [("AI", "summarised 1 more paper", "related-work", "progress:related-work")],
-    [("AI", "added the paper to the source list", "sources", "progress:sources")],
-    [("AI", "drafted related-work paragraph 4", "related-work", "progress:related-work")],
-    [("AI", "drafted the Results outline", "outline", "progress:outline")],
-    [("AI", "drafted the Discussion outline", "outline", "progress:outline")],
-    [("AI", "progress review 2: work is moving; no fixes suggested", "-", "workflow review")],
-    [("AI", "tightened related-work paragraph 2", "related-work", "progress:related-work")],
-    [("AI", "listed the threats to validity in the outline", "outline", "progress:outline")],
-]
+WRITING = ["Introduction", "Related work", "Method", "Results", "Discussion", "Limitations"]
+PILOT_AND_WRITING = (  # S-013 to S-037 for the "unused" scenario
+    [[("AI", "progress review 2: end of the reading phase; Stop if: nothing applies yet", "-",
+       "workflow review"),
+      ("YOU", "decided: go on to the pilot", "-", "answered")],
+     [("AI", "add-on experiment-plans switched on", "-", "workflow"),
+      ("AI", "experiment plan X-001 created: Pilot: do LLM graders prefer longer answers?", "-",
+       "used:experiment-plans")],
+     [("AI", "filled in plan X-001", "pilot", "progress:pilot used:experiment-plans"),
+      ("AI", "experiment X-001 started; 'What each result would mean' is locked", "-",
+       "used:experiment-plans")],
+     [("YOU", "answered: cap 30 USD; ask me before any single cost over 5 USD", "-",
+       "answered"),
+      ("AI", "add-on budget switched on", "-", "workflow"),
+      ("AI", "spent 0.40 USD (measured): pilot, 40 grader calls", "-", "used:budget"),
+      ("AI", "ran the pilot: the longer answer won 29 of 40 pairs", "pilot", "progress:pilot")],
+     [("AI", "wrote the results and what we learned into X-001", "pilot",
+       "progress:pilot used:experiment-plans")],
+     [("AI", "progress review 3: end of the pilot phase; Stop if: nothing applies", "-",
+       "workflow review"),
+      ("YOU", "decided: go on to writing; no more experiments or paid calls are planned", "-",
+       "answered")]]
+    + [[("AI", "drafted the {} section in paper/draft.md".format(s), "draft", "progress:draft")]
+       for s in WRITING]
+    + [[("AI", "revised the {} section".format(s), "draft", "progress:draft")]
+       for s in WRITING[:4]]
+    + [[("AI", "progress review 4: writing is moving; no fixes suggested", "-",
+         "workflow review")]]
+    + [[("AI", "revised the {} section".format(s), "draft", "progress:draft")]
+       for s in WRITING[4:]]
+    + [[("AI", "tightened the {} section".format(s), "draft", "progress:draft")]
+       for s in WRITING])
+DRAFT = """# Draft
+
+The paper text.
+
+## Introduction
+LLM graders are now widely used to compare model answers, so any bias they have can change
+which models look best.
+
+## Related work
+Earlier work reports position bias (Wang et al. 2023) and a preference for longer answers
+(Saito et al. 2023); length-controlled win rates change rankings (Dubois et al. 2024).
+
+## Method
+Pairwise grading of 40 answer pairs; in each pair one answer is a longer version of the other
+that adds no new information.
+
+## Results
+In the pilot the longer answer won 29 of 40 pairs (72%).
+
+## Discussion
+The pilot agrees with earlier reports; a larger run would be needed before any claim.
+
+## Limitations
+One grader model, 40 pairs, and longer versions written by one person.
+"""
+PILOT_PLAN = """# X-001 Pilot: do LLM graders prefer longer answers?
+
+## Question
+Does the grader pick the longer of two equally good answers more often than half the time?
+
+## Setup
+40 answer pairs; one paid grader model; each pair graded once; expected cost under 1 USD.
+
+## What each result would mean
+Longer wins in more than 60% of pairs: a length bias is likely; plan a larger run. Between 40%
+and 60%: no clear bias; rethink the topic. Under 40%: unexpected; check the setup first.
+
+## Results
+The longer answer won 29 of 40 pairs (72%). Cost: 0.40 USD (measured).
+
+## What we learned
+The result agrees with earlier reports; it supports writing up the pilot as a short paper.
+"""
+REVIEWS_UNUSED = [("2", "S-013", "reading moved; Stop if: nothing applies yet"),
+                  ("3", "S-018", "the pilot ran; Stop if: nothing applies"),
+                  ("4", "S-029", "writing is moving; no fixes suggested")]
 NEXT_ACTIONS = {  # scenario -> NEXT.md (default: the Method outline, from FILL)
     "budget": ("Plan the pilot: 200 grader calls on a paid LLM API (about $0.01 per call). "
                "Write pilot/plan.md: the calls, the expected cost, how results are stored. "
                "Don't run anything yet", "pilot", "pilot/plan.md exists with the cost estimate"),
-    "experiment": ("Run the pilot with the free local mock grader (python pilot/mock_grader.py "
-                   "pilot/pairs.jsonl) and record how often the longer answer scores higher",
-                   "pilot", "the pilot result is written down"),
-    "unused": ("Draft the Limitations section outline in paper/outline.md", "outline",
-               "the Limitations heading has 3 to 5 bullet points"),
+    "experiment": ("Run the pilot dry run with the free local word-overlap grader (python "
+                   "pilot/overlap_grader.py pilot/pairs.jsonl): does it score the longer answer "
+                   "higher?", "pilot", "the dry-run result is written down"),
+    "unused": ("Draft the abstract at the top of paper/draft.md", "draft",
+               "an abstract of at most 150 words"),
 }
-MOCK_GRADER = '''"""Mock LLM grader for the pilot: free and local, no API calls.
+OVERLAP_GRADER = """\"\"\"Free, local stand-in grader for the pilot dry run (no API calls).
 
-Usage: python pilot/mock_grader.py pilot/pairs.jsonl
-It "grades" both answers of each pair from 1 to 10 and counts which one scored higher.
-"""
+Scores an answer from 1 to 10 by how many of the reference answer's content words it contains
+(like ROUGE-1 recall). Usage: python pilot/overlap_grader.py pilot/pairs.jsonl
+\"\"\"
 import json
-import random
+import re
 import sys
+
+STOP = {"the", "and", "for", "are", "with", "that", "this", "from", "into", "they", "their",
+        "which", "when", "than", "then", "also", "can", "its", "has", "have", "was", "were"}
+
+
+def words(text):
+    return {w for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 2 and w not in STOP}
+
+
+def score(answer, reference):
+    ref = words(reference)
+    return 1 + round(9 * len(words(answer) & ref) / max(1, len(ref)))
+
 
 pairs = [json.loads(line) for line in open(sys.argv[1], encoding="utf-8") if line.strip()]
 longer = shorter = ties = 0
-for i, pair in enumerate(pairs):
-    rng = random.Random(i)
-    short = max(1, min(10, round(rng.gauss(6, 1.5) + len(pair["short"]) / 300)))
-    long_ = max(1, min(10, round(rng.gauss(6, 1.5) + len(pair["long"]) / 300)))
-    longer += long_ > short
-    shorter += short > long_
-    ties += short == long_
+for pair in pairs:
+    s, l = score(pair["short"], pair["reference"]), score(pair["long"], pair["reference"])
+    longer += l > s
+    shorter += s > l
+    ties += s == l
 print("pairs: {}, longer scored higher: {}, shorter scored higher: {}, ties: {}".format(
     len(pairs), longer, shorter, ties))
-'''
-
-
-def pairs_jsonl():
-    topics = ["photosynthesis", "inflation", "recursion", "the water cycle", "vaccines",
-              "plate tectonics", "supply and demand", "binary search", "the French Revolution",
-              "black holes", "climate change", "DNA replication", "compound interest",
-              "machine learning", "the immune system", "electric circuits", "evolution",
-              "the stock market", "encryption", "gravity"]
-    lines = []
-    for t in topics:
-        short = "A short, correct explanation of {}.".format(t)
-        long_ = short + " " + " ".join(
-            "It adds a further sentence of detail about {} (part {}).".format(t, k)
-            for k in range(1, 8))
-        lines.append(json.dumps({"question": "Explain " + t, "short": short, "long": long_}))
-    return "\n".join(lines) + "\n"
+"""
+PAIRS = [  # (question, reference, short, long)
+    ("photosynthesis",
+     "Plants use sunlight, water and carbon dioxide to make glucose and release oxygen.",
+     "Plants use sunlight to make glucose and release oxygen.",
+     "Plants use sunlight to make their food. This mostly happens in the leaves, which look "
+     "green because of chlorophyll. It is one of the most important processes on Earth."),
+    ("inflation",
+     "Inflation is a general rise in prices that reduces what money can buy.",
+     "Inflation is a general rise in prices, so money buys less.",
+     "Inflation means prices go up across the economy over time. Central banks watch it "
+     "closely and often raise interest rates to slow it down, and it reduces what money can buy."),
+    ("recursion",
+     "Recursion is when a function calls itself on a smaller problem until a base case stops it.",
+     "A recursive function calls itself until a base case stops it.",
+     "Recursion is a programming idea where something is defined in terms of itself. Many "
+     "people find it hard at first, but it becomes natural with practice and examples."),
+    ("the water cycle",
+     "Water evaporates, condenses into clouds, falls as precipitation and collects again.",
+     "Water evaporates, condenses into clouds and falls as rain.",
+     "Water evaporates from seas and lakes, condenses into clouds, and falls again as "
+     "precipitation such as rain or snow, then collects in rivers and oceans before it starts "
+     "again."),
+    ("vaccines",
+     "Vaccines train the immune system to recognise a germ so the body can fight it later.",
+     "Vaccines train the immune system to recognise a germ.",
+     "Vaccines are among the great successes of medicine. They are tested carefully before "
+     "use, and they have saved many millions of lives around the world."),
+    ("binary search",
+     "Binary search finds an item in a sorted list by halving the search range each step.",
+     "Binary search halves a sorted list's search range each step.",
+     "Binary search works on a sorted list: it checks the middle item, then keeps the half "
+     "where the item must be, halving the search range each step until it finds the item."),
+    ("gravity",
+     "Gravity is the force by which masses attract each other; it keeps planets in orbit.",
+     "Gravity is the force by which masses attract; it keeps planets in orbit.",
+     "Gravity is something we feel every day when we drop things. Newton and later Einstein "
+     "studied it in great depth, and scientists still study it today."),
+    ("encryption",
+     "Encryption scrambles data with a key so only someone with the right key can read it.",
+     "Encryption scrambles data with a key so only key holders can read it.",
+     "Encryption scrambles data using a key. Only someone with the right key can read it, "
+     "which protects messages, passwords and payments, and it is used by banks and messaging "
+     "apps every day."),
+]
 
 
 def fill(text):
@@ -322,12 +428,17 @@ def history(scenario):
         i = step.index("C")
         step[i:i + 1] = fix
     if scenario == "unused":
-        steps[1] = steps[1] + [("AI", "spent 0.40 USD (measured): one trial grader call", "-",
-                                "used:budget")]
-        steps += [list(s) for s in MORE_STEPS]
+        steps += [list(s) for s in PILOT_AND_WRITING]
     if scenario == "experiment":
-        steps[11] = steps[11] + [("AI", "add-on experiment-plans switched on", "-",
-                                  "workflow")]
+        steps[9] = [("AI", "summarised the related-work draft in 3 bullet points",
+                     "related-work", "progress:related-work")]
+        steps[10] = [("AI", "progress review 1: end of the reading phase; Stop if: nothing "
+                            "applies yet; go/no-go asked", "-", "workflow review")]
+        steps[11] = [("YOU", "decided: go on to the pilot; first a dry run with the free "
+                             "word-overlap grader, as a baseline and a test of the pipeline", "-",
+                      "answered"),
+                     ("AI", "set the phase to pilot", "-", "workflow"),
+                     ("AI", "add-on experiment-plans switched on", "-", "workflow")]
     return steps
 
 
@@ -363,35 +474,63 @@ def main(argv):
     parts = dict(PARTS)
     addons, later = {}, ["budget"]
     limits = {"deadline": "about 6 weeks", "external_spending": "ask before any paid API call"}
-    if a.scenario in ("budget", "experiment"):
+    phase = "reading"
+    decisions = []
+    if a.scenario in ("budget", "experiment", "unused"):
         parts["pilot"] = "pilot/"
         (root / "pilot").mkdir()
     if a.scenario == "unused":
-        addons = {"budget": {"on": True, "since": 1}, "experiment-plans": {"on": True, "since": 1}}
+        phase = "writing"
+        parts["draft"] = "paper/draft.md"
+        addons = {"experiment-plans": {"on": True, "since": 14},
+                  "budget": {"on": True, "since": 16}}
         later = []
         limits["budget"] = {"cap": 30, "currency": "USD", "ask_over": 5}
         (root / "experiments").mkdir()
-        spend_time = (start + timedelta(days=1, hours=1, minutes=12)).strftime(F)
+        (root / "experiments" / "X-001-pilot.md").write_text(PILOT_PLAN, encoding="utf-8")
+        meaning = PILOT_PLAN.split("## What each result would mean")[1].split("## Results")[0]
+        locks = {"X-001": {"hash": hashlib.sha256(" ".join(meaning.split()).encode(
+            "utf-8")).hexdigest(), "step": "S-015", "time": (start + timedelta(
+                days=14, hours=1, minutes=12)).strftime(F)}}
+        (root / ".workflow-architect" / "locks.json").write_text(
+            json.dumps(locks, indent=2) + "\n", encoding="utf-8")
+        (root / "pilot" / "results.md").write_text(
+            "# Pilot results\n\nThe longer answer won 29 of 40 pairs (72%). Details: "
+            "experiments/X-001-pilot.md.\n", encoding="utf-8")
+        (root / "paper" / "draft.md").write_text(DRAFT, encoding="utf-8")
+        spend_time = (start + timedelta(days=15, hours=1, minutes=18)).strftime(F)
         (root / "SPENDING.md").write_text(
             "# Spending\n\nEvery cost of this project, written with `tools/wf.py spend`.\n"
             "Format: `- time | step | amount | estimate or measured | what`\n\n"
-            "- {} | S-002 | 0.40 | measured | one trial grader call\n".format(spend_time),
+            "- {} | S-016 | 0.40 | measured | pilot, 40 grader calls\n".format(spend_time),
             encoding="utf-8")
+        d = lambda days: (start + timedelta(days=days)).strftime("%Y-%m-%d")
+        decisions = ['- D-4 | {} | "go on to the pilot" | about: end of reading'.format(d(12)),
+                     '- D-5 | {} | "cap 30 USD; ask me before any single cost over 5 USD" | '
+                     'about: budget'.format(d(15)),
+                     '- D-6 | {} | "go on to writing; no more experiments or paid calls are '
+                     'planned" | about: end of the pilot'.format(d(17))]
     if a.scenario == "experiment":
+        phase = "pilot"
         addons = {"experiment-plans": {"on": True, "since": 12}}
         (root / "experiments").mkdir()
-        (root / "pilot" / "mock_grader.py").write_text(MOCK_GRADER, encoding="utf-8")
-        (root / "pilot" / "pairs.jsonl").write_text(pairs_jsonl(), encoding="utf-8")
+        (root / "pilot" / "overlap_grader.py").write_text(OVERLAP_GRADER, encoding="utf-8")
+        (root / "pilot" / "pairs.jsonl").write_text("".join(json.dumps(
+            {"question": "Explain " + q, "reference": r, "short": s, "long": l}) + "\n"
+            for q, r, s, l in PAIRS), encoding="utf-8")
+        decisions = ['- D-4 | {} | "go on to the pilot; first a dry run with the free '
+                     'word-overlap grader, as a baseline and a test of the pipeline" | about: '
+                     'end of reading'.format((start + timedelta(days=11)).strftime("%Y-%m-%d"))]
     if a.scenario in NEXT_ACTIONS:
         action, part, done = NEXT_ACTIONS[a.scenario]
         (root / "NEXT.md").write_text("# Next action\n\nActor: AI\nAction: {}\nPart: {}\n"
                                       "Done when: {}\n".format(action, part, done),
                                       encoding="utf-8")
     state = {
-        "workflow_architect": "0.3", "project": "Grader length study", "phase": "reading",
+        "workflow_architect": "0.3", "project": "Grader length study", "phase": phase,
         "step": n, "practice": False, "brief_version": 1, "structure_version": 1,
         "autonomy": "one-step", "fix_level": level, "review_every": 10,
-        "review_phase": "reading", "recheck_after": 5, "tools": ["claude-code"],
+        "review_phase": phase, "recheck_after": 5, "tools": ["claude-code"],
         "instruction_files": ["AGENTS.md", "CLAUDE.md"], "python": PY, "git": "none",
         "parts": parts, "addons": addons, "addons_later": later, "limits": limits,
     }
@@ -409,7 +548,8 @@ def main(argv):
         (root / "DECISIONS.md").read_text(encoding="utf-8").rstrip("\n") +
         "\n\n- D-1 | {} | \"yes, approve\" | about: brief v1\n- D-2 | {} | \"approve\" | "
         "about: structure v1\n- D-3 | {} | \"focus on pairwise grading first\" | about: "
-        "scope\n".format(date, date, date), encoding="utf-8")
+        "scope\n".format(date, date, date) + "".join(x + "\n" for x in decisions),
+        encoding="utf-8")
     q = (root / "QUESTIONS.md").read_text(encoding="utf-8")
     if a.scenario != "unused":
         q = q.replace("## Just in time\n", "## Just in time\n- Q-1 | trigger: the first paid "
@@ -457,10 +597,14 @@ def main(argv):
                 e1_time))
         (root / "LOG.md").write_text(log_text, encoding="utf-8")
     else:
-        reviews = REVIEW_1
-        if a.scenario == "unused":
-            reviews += "\n" + REVIEW_1.replace("1 | at S-010", "2 | at S-020").replace(
-                "in 8 of 10 steps", "in 9 of 10 steps")
+        reviews = "" if a.scenario == "experiment" else REVIEW_1
+        extra = (REVIEWS_UNUSED if a.scenario == "unused" else
+                 [("1", "S-011", "end of the reading phase; Stop if: nothing applies yet")]
+                 if a.scenario == "experiment" else [])
+        for n_, at, moving in extra:
+            reviews += ("\n## Progress review {} | at {}\n- Moving: {}\n- Friction: none\n"
+                        "- Unused: nothing yet\n- Brief: still true\n- Fixes being tested: "
+                        "none\n- Suggested fixes: none\n".format(n_, at, moving))
         evo = evo.replace("No fixes yet.\n", reviews)
     (root / "WORKFLOW-FIXES.md").write_text(evo, encoding="utf-8")
     print("made {} ({} steps, scenario {})".format(root, n, a.scenario))
