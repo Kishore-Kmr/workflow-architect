@@ -30,7 +30,7 @@ Below, `wf` means `{{python}} tools/wf.py`.
      `Action: answer: <the question>`. Never leave the action that was just done. For an
      action by the user, add `Estimated: <how long it will take them>`; if that is more than
      BRIEF.md allows for one task, split it or ask.
-   - Git: {{git policy, e.g. "commit with a message saying what moved; never push" or "do not commit; the user commits" or "no git"}}.
+   - Git: {{git policy, e.g. "stage only the files this step changed (`git add <paths>`, never `git add -A` or `git add .`) and commit with a message saying what moved; never push" or "do not commit; the user commits" or "no git"}}.
 6. **Health.** Run `wf health`. It checks the files, then reads the log for signs of trouble.
    Fix any file problem and log the fix with `[workflow]`. If it shows a warning or a
    re-check, follow `tools/fixes.md` now.

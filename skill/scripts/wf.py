@@ -55,6 +55,9 @@ EXPERIMENTS_DIR = "experiments"
 LOCK_FILE = ".workflow-architect/locks.json"
 PLAN_SECTIONS = ["Question", "Setup", "What each result would mean", "Results",
                  "What we learned"]
+STOP_FILE = "STOP-NOTE.md"
+STOP_LINES = ["Tried", "Found", "Reusable", "Could still go"]
+STOP_LINE_RE = re.compile(r"^- (Tried|Found|Reusable|Could still go):[ \t]*(.*)$")
 SPEND_RE = re.compile(r"^- (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| "
                       r"(-?\d+(?:\.\d+)?) \| (estimate|measured) \| (.+)$")
 OPINION_RE = re.compile(r"^- (SO-\d+) \| (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) \| (S-\d{3,}|P|-) \| "
@@ -79,7 +82,7 @@ PLAN_TEMPLATE = """# {xid} {title}
 (what we want to find out)
 
 ## Setup
-(data, models, how many runs, expected cost)
+(data, models, how many runs, expected cost; pilot before scale: the smallest run that could show the idea is wrong)
 
 ## What each result would mean
 (for each likely result: what we would conclude, and what we would do next)
@@ -737,6 +740,39 @@ def addons_summary(root, state):
     return "; ".join(out)
 
 
+# ---------- stop note ----------
+
+def stop_problems(root, state):
+    """STOP-NOTE.md: required when the project is stopped; every entry has its four lines."""
+    p = root / STOP_FILE
+    if not p.exists():
+        return (["STATE.json phase is \"stopped\" but there is no STOP-NOTE.md (see AGENTS.md)"]
+                if state.get("phase") == "stopped" else [])
+    entries, cur, field = [], None, None
+    for line in read(p).splitlines():
+        if line.startswith("## "):
+            cur, field = {"head": line[3:].strip(), "fields": {}}, None
+            entries.append(cur)
+            continue
+        if cur is None:
+            continue
+        m = STOP_LINE_RE.match(line)
+        if m:
+            field = m.group(1)
+            cur["fields"][field] = m.group(2).strip()
+        elif field and line.strip():               # a value continued on the next lines
+            cur["fields"][field] = (cur["fields"][field] + " " + line.strip()).strip()
+    if not entries:
+        return ["STOP-NOTE.md has no entry like '## <date> | stopped: <what>'"]
+    out = []
+    for e in entries:
+        missing = [k for k in STOP_LINES if not e["fields"].get(k)]
+        if missing:
+            out.append("STOP-NOTE.md '{}': missing or empty: {}".format(
+                e["head"], ", ".join("- {}:".format(k) for k in missing)))
+    return out
+
+
 # ---------- check ----------
 
 def check(root):
@@ -834,6 +870,7 @@ def check(root):
         problems.append(PRACTICE_FILE + " left over from the practice round")
     problems += evo_problems + fix_problems(evo, state)
     problems += addon_problems(root, state)
+    problems += stop_problems(root, state)
     problems += guard_problems(root, state, entries)
     return problems
 

@@ -28,8 +28,9 @@ is missing, removes what is unused, and asks you before any change you have not 
    are always yours.
 7. **Files are the memory.** Handoffs, decisions and changes are files, so sessions can be short
    and fresh, and everything can be audited.
-8. **Honesty.** Never record a decision you did not make; label numbers (measured, estimated,
-   assumed); every report says what moved in the end product, or that nothing did.
+8. **Honesty.** Never record a decision you did not make; every number names its source and a
+   label (measured, reported, estimated, assumed); every report says what moved in the end
+   product, or that nothing did.
 
 ## 3. Phases
 
@@ -168,7 +169,8 @@ replaced, with your agreement, before handover. The dummy work is removed.
 | `QUESTIONS.md` | open and just-in-time questions with their triggers |
 | `RULES.md` | a few rules, each with its origin and its check (if any) |
 | `WORKFLOW-FIXES.md` | every workflow fix: evidence, change, size, made by (the AI or you), measure, re-check, undo, outcome; and the progress review reports |
-| `tools/step.md` | the step procedure in plain words, so any tool can follow it |
+| `tools/step.md` | the step procedure in plain words, so any tool can follow it; with git, it stages only the files a step changed |
+| `STOP-NOTE.md` | written when the project or a direction stops: what was tried, found, reusable, and where it could still go; required when the phase is "stopped" |
 | `tools/fixes.md` | how the workflow fixes itself (sizes, fix levels, records), re-check, undo, `/workflow`, re-interview |
 | `tools/progress-review.md` | the periodic progress review by a fresh AI |
 | `tools/addons.md` | the add-ons it can switch on (section 5), with their instructions |
@@ -421,6 +423,11 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   research RULES.md, five generic lessons go into the core: a stop record; secrets used only by
   code; every number names its source; pilot before scale; stage only the files you changed.
   Deferred: full tests, docs, learning across projects (with the research-specific lessons).
+- 2026-11-10: no secret scan and no separate rule about secrets, in your words: "It is not a
+  scanner. During the work, if the agent sees any keys, let it tell the user ... this behaviour
+  is default." So four lessons are built: the stop record, number sources, pilot before scale,
+  staging only changed files. The stop record is required when the project stops; a dropped
+  direction gets a shorter entry in the same file.
 
 ## 13. Open questions
 

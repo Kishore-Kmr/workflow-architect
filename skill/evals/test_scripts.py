@@ -476,8 +476,13 @@ class AddonTest(HistoryCase):
         plan = self.root / path
         self.wf_fails("experiment", "start", "X-001", expect="fill in 'Question'")
         text = plan.read_text(encoding="utf-8")
+        self.assertIn("pilot before scale", text)
+        plan.write_text(text.replace("(what we want to find out)", "Longer answers?"),
+                        encoding="utf-8")
+        self.wf_fails("experiment", "start", "X-001", expect="fill in 'Setup'")
+        setup = re.search(r"## Setup\n(\(.*\))\n", text).group(1)
         for old, new in (("(what we want to find out)", "Do graders prefer longer answers?"),
-                         ("(data, models, how many runs, expected cost)", "20 pairs, mock grader"),
+                         (setup, "20 pairs, mock grader"),
                          ("(for each likely result: what we would conclude, and what we would "
                           "do next)", "Longer wins over 60%: go on. Otherwise: stop.")):
             text = text.replace(old, new)
@@ -520,6 +525,25 @@ class AddonTest(HistoryCase):
                        encoding="utf-8")
         self.wf_fails("check", expect="needs an 'Estimated:' line")
         nxt.write_text(nxt.read_text(encoding="utf-8") + "Estimated: 1 h\n", encoding="utf-8")
+        self.assertIn("check: OK", self.wf_ok("check"))
+
+
+class LessonTest(ProjectCase):
+    """v0.4: the lessons that a script can check (the stop record)."""
+
+    def test_stop_note(self):
+        st = self.root / "STATE.json"
+        state = json.loads(st.read_text(encoding="utf-8"))
+        state["phase"] = "stopped"
+        st.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        self.wf_fails("check", expect="no STOP-NOTE.md")
+        note = self.root / "STOP-NOTE.md"
+        head = "# Stop notes\n\n## 2026-11-20 | stopped: the project\n"
+        note.write_text(head + "- Tried: a 40-pair pilot\n- Found: 29 of 40\n", encoding="utf-8")
+        self.wf_fails("check", expect="missing or empty: - Reusable:, - Could still go:")
+        note.write_text(head + "- Tried: a 40-pair pilot\n- Found: 29 of 40\n"
+                        "- Reusable: the pairs file\n- Could still go:\n  a workshop paper\n",
+                        encoding="utf-8")
         self.assertIn("check: OK", self.wf_ok("check"))
 
 

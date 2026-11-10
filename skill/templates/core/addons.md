@@ -61,7 +61,8 @@ You check one piece of work before it counts as done. You did not make it, and y
 the work, its "Done when", the project goal, and the sources it relies on. You change nothing.
 
 1. Check the work against its "Done when" and the goal.
-2. Check every claim against its sources: does the source exist, and does it say this?
+2. Check every claim and number against its source: does the source exist, and does it say
+   this? A number without a named source is a problem.
 3. Answer in at most 10 lines: the first line is `pass` or `fail`, then each problem and where
    it is.
 
@@ -90,7 +91,9 @@ Read tools/second-opinion.md in the project folder and follow it.
 - **While on:** never run an experiment without a started plan.
   1. `wf experiment new "<title>"` creates `experiments/X-<n>-<title>.md`.
   2. Fill in Question, Setup and "What each result would mean": for each likely result, what
-     we would conclude and what we would do next.
+     we would conclude and what we would do next. Pilot before scale: the first run is the
+     smallest one that could show the idea is wrong; a bigger run gets its own plan, after
+     the pilot's result says it is worth it.
   3. `wf experiment start X-<n>` locks "What each result would mean".
   4. Run the experiment, then fill in Results and What we learned.
 

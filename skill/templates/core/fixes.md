@@ -81,5 +81,6 @@ Also when a progress review finds that the brief no longer matches what is happe
    BRIEF.md only after the user approves.
 3. Record the approval word for word in DECISIONS.md, set STATE.json "brief_version", and log
    it with `[answered]`.
-4. Check the workflow against the new brief: parts, rules, add-ons, questions saved for later.
+4. If the change drops a direction, add its entry to STOP-NOTE.md (see AGENTS.md).
+5. Check the workflow against the new brief: parts, rules, add-ons, questions saved for later.
    Each change that follows is a workflow fix: size it, then make or propose it as above.

@@ -31,7 +31,13 @@ Stop and ask {{the user's name, or "the user"}} when:
 
 {{How strict, from the interview, e.g. "Small wording choices in drafts: decide yourself and list them in the report." or delete}}
 
-Never record a decision the user did not make. Label numbers as measured, estimated or assumed.
+Never record a decision the user did not make. Every number names its source (a file, a
+command or a paper) and a label: measured, reported (from a paper or other source), estimated
+or assumed.
+
+When the user stops the project or drops a direction, first add an entry to `STOP-NOTE.md`:
+`## <date> | stopped: <what>`, then the lines `- Tried:`, `- Found:`, `- Reusable:` and
+`- Could still go:`. When the whole project stops, set STATE.json "phase" to "stopped".
 
 ## Always ask first (the user's to decide)
 
@@ -57,4 +63,5 @@ how freely the workflow fixes itself (fix level).
 | `tools/fixes.md` | how the workflow fixes itself; undo; re-interview |
 | `tools/progress-review.md` | the regular progress review by a fresh AI |
 | `tools/addons.md` | extra parts the workflow can switch on: budget, second opinion, experiment plans |
+| `STOP-NOTE.md` | written when the project or a direction stops: tried, found, reusable |
 | `tools/wf.py` | status, begin, log, check, health, fix, add-on commands |

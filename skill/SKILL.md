@@ -133,8 +133,9 @@ refused, stop and offer options; don't work around it.
    to an add-on says so). **NEXT.md:** an action for the user has an `Estimated:` line.
    **DECISIONS.md:** the user's decisions from the interview, word for word and dated,
    including the approvals of the brief and the structure.
-7. **Git** as agreed: `git init` only if approved; `.gitignore` for secrets found. Don't commit
-   yet.
+7. **Git** as agreed: `git init` only if approved; `.gitignore` for secrets found. The git line
+   in tools/step.md stages only the files a step changed (never `git add -A` or `git add .`).
+   Don't commit yet.
 8. Log the setup: `<python> tools/wf.py log AI "workflow set up: brief v1, structure v1"
    --tags workflow`. Then run `<python> tools/wf.py check` and fix every problem.
 

@@ -52,5 +52,6 @@ Then log it: `wf log AI "progress review <n>: <one line>" --tags "workflow revie
 - If the brief no longer matches, ask the user whether to re-interview (`tools/fixes.md`).
 - At the end of a phase, put the go/no-go decision to the user: NEXT.md becomes
   `Actor: YOU`, `Action: decide: continue into <next phase>, narrow, change direction, or
-  stop`, with the evidence in the report, including any "Stop if" item that applies.
+  stop`, with the evidence in the report, including any "Stop if" item that applies. If they
+  choose to stop or to change direction, first add the entry to STOP-NOTE.md (see AGENTS.md).
 - Tell the user what the review found in at most five lines.
