@@ -6,9 +6,9 @@ interviews the user adaptively, builds the smallest workflow that fits, and lets
 check itself and evolve.
 
 **Start every session by reading `DESIGN.md`** (the spec). State on 2026-11-10: design draft 4;
-v0.1 and v0.2 built and tested (closed). v0.3 (three add-ons: budget, second opinion, experiment
-plans; plainer words) built and tested (`python skill/evals/test_scripts.py`, `tests/`);
-closed on the builder's tests. Next: v0.4 (section 10), plan to be agreed with the user.
+v0.1 to v0.4 built and tested (`python skill/evals/test_scripts.py`, `tests/`). The build plan
+is done for now; deferred items (full tests, docs, learning across projects) are in DESIGN.md
+section 13. Next: only what the user asks for.
 
 ## How to work here
 

@@ -1,8 +1,8 @@
 # workflow-architect — design
 
 Draft 4 · 2026-11-07 · Target: any AI coding tool (harness-agnostic); v0.1 hand-tested in Claude Code
-Status: v0.1, v0.2 and v0.3 built and tested (see `tests/`); v0.3 closed 2026-11-10 on the
-builder's tests. Next: v0.4 (section 10). Decisions so far: section 12. Open questions: section 13.
+Status: v0.1 to v0.4 built and tested (see `tests/`). The build plan is done for now; full
+tests, docs and learning across projects are deferred (section 13). Decisions so far: section 12. Open questions: section 13.
 
 ## 1. What it is
 
@@ -358,9 +358,9 @@ skill/
    2026-11-10: progress review, workflow fixes, `/workflow`).
 3. **v0.3:** the three add-ons (section 5) and the two core lines; the plainer words of
    2026-11-10. Domain packs and the other modules are set aside or discarded (section 12).
-4. **v0.4:** five generic lessons from your research repo's RULES.md, added to the core
-   (section 12, 2026-11-10). Full tests, docs and learning across projects are deferred
-   (section 13).
+4. **v0.4:** generic lessons from your research repo's RULES.md, added to the core: four after
+   your decision on secrets (section 12, 2026-11-10). Built and tested 2026-11-10. Full tests,
+   docs and learning across projects are deferred (section 13).
 
 ## 11. Not in scope for now
 

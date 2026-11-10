@@ -1074,7 +1074,8 @@ def warnings(ctx):
     state = ctx["state"]
     addons = state.get("addons") if isinstance(state.get("addons"), dict) else {}
     span = th["unused_addon_steps"]
-    for name in sorted(n for n in addons if n in ADDONS and addon_on(state, n)):
+    stopped = state.get("phase") == "stopped"
+    for name in sorted(n for n in addons if n in ADDONS and addon_on(state, n) and not stopped):
         since = addons[name].get("since") if isinstance(addons[name].get("since"), int) else 0
         start = max(since, handled(ctx, "unused:" + name))
         if cur - start >= span and not any(has(steps[n], "used", name)
@@ -1139,6 +1140,8 @@ def review_due(ctx):
     every = state.get("review_every", 10)
     every = every if isinstance(every, int) and every > 0 else 10
     since = ctx["cur"] - last
+    if state.get("phase") == "stopped":            # nothing left to review; STOP-NOTE.md says why
+        return False, "", since, every
     if state.get("review_phase") and state.get("phase") != state.get("review_phase"):
         return True, "phase '{}' ended".format(state.get("review_phase")), since, every
     if since >= every:
@@ -1262,9 +1265,10 @@ def cmd_health(root, argv):
     progress = ("progress: {} of the last {} steps".format(
         sum(flag("progress", s, ctx) for s in window), len(window)) if window
         else "no steps yet")
+    review = ("none: the project is stopped" if ctx["state"].get("phase") == "stopped"
+              else "due" if due else "in {} steps".format(every - since))
     lines.append("Health: {} | {} | progress review {}".format(
-        "OK" if not ws else "{} warning(s)".format(len(ws)), progress,
-        "due" if due else "in {} steps".format(every - since)))
+        "OK" if not ws else "{} warning(s)".format(len(ws)), progress, review))
     for w in ws:
         lines.append("- warning [{}] {} -> likely fix: {}".format(w["id"], w["text"], w["fix"]))
     for c in cbs:

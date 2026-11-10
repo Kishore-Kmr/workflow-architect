@@ -545,6 +545,8 @@ class LessonTest(ProjectCase):
                         "- Reusable: the pairs file\n- Could still go:\n  a workshop paper\n",
                         encoding="utf-8")
         self.assertIn("check: OK", self.wf_ok("check"))
+        health = json.loads(self.wf_ok("health", "--json"))
+        self.assertFalse(health["review_due"])    # a stopped project needs no progress review
 
 
 if __name__ == "__main__":
