@@ -120,14 +120,15 @@ can resume in a fresh session.
 
 One page: goal, finish line, limits, how you want to work (including how freely the workflow
 fixes itself and the progress review), relevant topics,
-skipped topics with reasons, open and just-in-time questions, and every proposed default marked
+skipped topics with reasons, open questions, one line saying how many questions wait for a
+later stage (not listed), and every proposed default marked
 "OK?". Nothing is built until you approve it.
 
 ### 3.4 Structure proposal
 
 The folder tree: the core plus only the add-ons the brief justifies for the first phase (each
-with the answer that triggered it), the add-ons expected later and what will switch them on,
-and what you will be asked during the work. You approve, change or ask.
+with the answer that triggered it), and one line for what waits for a later stage (add-ons and
+questions, not listed one by one). You approve, change or ask.
 
 ### 3.5 Generation and practice round
 
@@ -428,6 +429,10 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   is default." So four lessons are built: the stop record, number sources, pilot before scale,
   staging only changed files. The stop record is required when the project stops; a dropped
   direction gets a shorter entry in the same file.
+- 2026-11-11, your comment after using the skill on `../LLM-as-a-judge/`: deferring later-stage
+  things works, but listing every deferred item, again in the brief, the proposal and "You'll be
+  asked during the work", makes the replies huge. Fix: one short line saying how many things
+  wait for a later stage; the items stay listed only in QUESTIONS.md.
 
 ## 13. Open questions
 

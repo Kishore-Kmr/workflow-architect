@@ -46,8 +46,9 @@ yet)". Yours to add to at any time; the workflow reads it before each step.>
 ## Open questions
 - <question>: <why it matters>
 
-## Saved for later (asked when the stage comes)
-- <question>: asked when <stage trigger>
+## Saved for later
+<One line, not a list, e.g. "5 questions wait for their stage; each is asked when that stage
+comes (QUESTIONS.md)." Leave the section out if there are none.>
 
 ## First action
 <The smallest action that tells us the most, and who does it.> **OK?**
@@ -83,9 +84,9 @@ Structure proposal (version 1)
 Existing files: <kept as they are; which ones the parts point to>
 Rules from your answers: <rule> <- because: <answer>
 Add-ons switched on now: <add-on> <- because: <answer> (or "none")
-Add-ons later: <add-on>, switched on when <trigger>, with question Q-<n>
+Later: <one line, not a list, e.g. "budget and experiment plans can be switched on later,
+  and 5 questions wait for their stage (QUESTIONS.md)">
 Not added: <add-on>: <why not>; would be added if <what would change it>
-You will be asked during the work: <just-in-time questions and their triggers>
 Git: <what will happen, e.g. "git init, then one commit after the practice round">
 ```
 
