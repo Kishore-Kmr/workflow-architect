@@ -120,15 +120,14 @@ can resume in a fresh session.
 
 One page: goal, finish line, limits, how you want to work (including how freely the workflow
 fixes itself and the progress review), relevant topics,
-skipped topics with reasons, open questions, one line saying how many questions wait for a
-later stage (not listed), and every proposed default marked
+skipped topics with reasons, open questions, and every proposed default marked
 "OK?". Nothing is built until you approve it.
 
 ### 3.4 Structure proposal
 
 The folder tree: the core plus only the add-ons the brief justifies for the first phase (each
-with the answer that triggered it), and one line for what waits for a later stage (add-ons and
-questions, not listed one by one). You approve, change or ask.
+with the answer that triggered it). What waits for a later stage is not mentioned; it is
+asked when that stage comes. You approve, change or ask.
 
 ### 3.5 Generation and practice round
 
@@ -433,6 +432,10 @@ Hands-on tests in tools other than Claude Code (after v0.1); scheduling between 
   things works, but listing every deferred item, again in the brief, the proposal and "You'll be
   asked during the work", makes the replies huge. Fix: one short line saying how many things
   wait for a later stage; the items stay listed only in QUESTIONS.md.
+- 2026-11-11, later the same day, you changed your mind: "No need to say anything about the
+  questions that are deferred. Just defer them till the corresponding stage comes." The core
+  rule "when unsure, ask" covers it. So nothing about deferred items is said in the brief, the
+  proposal or the handover (replaces the one-line version above).
 
 ## 13. Open questions
 

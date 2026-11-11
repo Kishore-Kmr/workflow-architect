@@ -23,9 +23,9 @@ is in.
    as measured, estimated or assumed.
 6. **No questions about the cost of running you**; the user monitors it. Money questions are
    only about external spending.
-7. **Plain words**, from the user's point of view. Keep messages short. Say what is saved for
-   a later stage once, in one line ("5 questions wait for their stage"); don't list those
-   items in the brief, the proposal or the handover. They are listed in QUESTIONS.md.
+7. **Plain words**, from the user's point of view. Keep messages short. Don't mention questions
+   that belong to a later stage: save each in QUESTIONS.md with its trigger and ask it when
+   that stage comes. Not in the brief, the proposal or the handover.
 
 ## How to ask
 
@@ -164,6 +164,5 @@ In at most 8 lines: what was built (number of files); the first action and who d
 continue: open a fresh session in this folder and type `/step` (Claude Code) or say "do a step"
 (other tools); everything is kept in the files, so sessions can be short; the workflow checks
 itself after each step, reports any fix it makes to itself with an undo, and `/workflow`
-("check the workflow") shows or changes it; one line saying how many questions wait for a
-later stage (not listed again). Set
+("check the workflow") shows or changes it. Set
 interview.json "stage" to "done".

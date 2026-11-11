@@ -74,9 +74,6 @@ submitted."
 - Topic: LLM-as-judge length bias (you said)
 - Phases: reading, then pilot, then writing (you approved)
 
-## Saved for later
-1 question waits for its stage (QUESTIONS.md).
-
 ## First action
 List candidate papers on LLM-as-judge length bias in notes/sources.md.
 
